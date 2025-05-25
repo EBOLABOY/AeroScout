@@ -16,7 +16,7 @@ services:
 
   # 后端API服务
   backend:
-    build:
+    build: 
       context: ./aeroscouthq_backend
       dockerfile: Dockerfile
     container_name: aeroscout-backend
@@ -40,15 +40,10 @@ services:
       - redis
     networks:
       - aeroscout-network
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # Celery工作进程
   celery:
-    build:
+    build: 
       context: ./aeroscouthq_backend
       dockerfile: Dockerfile
     container_name: aeroscout-celery
@@ -73,9 +68,9 @@ services:
       - aeroscout-network
     command: ["celery", "-A", "app.celery_worker", "worker", "--loglevel=info", "--pool=solo"]
 
-  # 前端服务
+  # 前端服务 - 使用构建版本
   frontend:
-    build:
+    build: 
       context: ./aeroscout-frontend
       dockerfile: Dockerfile
     container_name: aeroscout-frontend
@@ -85,7 +80,6 @@ services:
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=http://47.79.39.147:8000
-      - HOSTNAME=0.0.0.0
     depends_on:
       - backend
     networks:
