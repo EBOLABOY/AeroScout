@@ -1,0 +1,106 @@
+// 辅助函数：获取可用的航空公司
+const getAvailableAirlines = (itineraries: FlightItinerary[]): AirlineInfo[] => {
+  const airlineMap = new Map<string, AirlineInfo>();
+
+  itineraries.forEach((itinerary) => {
+    itinerary.segments?.forEach((segment) => {
+      if (segment.airlineCode && segment.airlineName) {
+        airlineMap.set(segment.airlineCode, {
+          code: segment.airlineCode,
+          name: segment.airlineName,
+        });
+      }
+    });
+  });
+
+  return Array.from(airlineMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+};
+
+// 辅助函数：获取可用的中转选项
+const getAvailableStopOptions = (itineraries: FlightItinerary[]): { label: string; value: number | null }[] => {
+  const stopCounts = new Set<number>();
+
+  itineraries.forEach((itinerary) => {
+    if (itinerary.segments) {
+      const stops = itinerary.segments.length - 1;
+      stopCounts.add(stops);
+    }
+  });
+
+  const options = [{ label: '任意中转次数', value: null }];
+
+  // 添加所有可用的中转次数选项
+  Array.from(stopCounts)
+    .sort((a, b) => a - b)
+    .forEach((stops) => {
+      options.push({
+        label: stops === 0 ? '直飞' : `最多 ${stops} 次中转`,
+        value: stops,
+      });
+    });
+
+  return options;
+};
+
+// 辅助函数：应用排序和筛选
+const applySortAndFilters = (
+  itineraries: FlightItinerary[],
+  sortConfig: SortConfig,
+  filterConfig: FilterConfig
+): FlightItinerary[] => {
+  // 首先应用筛选
+  let filtered = itineraries.filter((itinerary) => {
+    // 航空公司筛选
+    if (filterConfig.selectedAirlines.length > 0) {
+      const itineraryAirlines = new Set(itinerary.segments?.map((segment) => segment.airlineCode) || []);
+      const hasSelectedAirline = filterConfig.selectedAirlines.some((code) => itineraryAirlines.has(code));
+      if (!hasSelectedAirline) return false;
+    }
+
+    // 中转次数筛选
+    if (filterConfig.maxStops !== null) {
+      const stops = (itinerary.segments?.length || 0) - 1;
+      if (stops > filterConfig.maxStops) return false;
+    }
+
+    return true;
+  });
+
+  // 然后应用排序
+  return filtered.sort((a, b) => {
+    let comparison = 0;
+
+    switch (sortConfig.sortBy) {
+      case 'price':
+        comparison = (a.price?.amount || 0) - (b.price?.amount || 0);
+        break;
+      case 'duration':
+        comparison = (a.totalDurationMinutes || 0) - (b.totalDurationMinutes || 0);
+        break;
+      case 'departureTime':
+        const aDepartureTime = a.segments?.[0]?.departureTime
+          ? new Date(a.segments[0].departureTime).getTime()
+          : 0;
+        const bDepartureTime = b.segments?.[0]?.departureTime
+          ? new Date(b.segments[0].departureTime).getTime()
+          : 0;
+        comparison = aDepartureTime - bDepartureTime;
+        break;
+      case 'arrivalTime':
+        const aLastSegmentIndex = (a.segments?.length || 0) - 1;
+        const bLastSegmentIndex = (b.segments?.length || 0) - 1;
+        const aArrivalTime = a.segments?.[aLastSegmentIndex]?.arrivalTime
+          ? new Date(a.segments[aLastSegmentIndex].arrivalTime).getTime()
+          : 0;
+        const bArrivalTime = b.segments?.[bLastSegmentIndex]?.arrivalTime
+          ? new Date(b.segments[bLastSegmentIndex].arrivalTime).getTime()
+          : 0;
+        comparison = aArrivalTime - bArrivalTime;
+        break;
+      default:
+        comparison = 0;
+    }
+
+    return sortConfig.order === 'asc' ? comparison : -comparison;
+  });
+};

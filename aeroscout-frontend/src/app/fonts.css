@@ -1,0 +1,89 @@
+/*
+ * 使用 Inter 字体作为 SF Pro 的替代品
+ * Inter 字体通过 next/font/google 加载，不需要在这里定义 @font-face
+ * 相关配置在 layout.tsx 中
+ */
+
+/*
+ * 保留 SF Pro 字体的定义，但添加 Inter 作为备选方案
+ * 这样如果用户系统中安装了 SF Pro 字体，仍然可以使用
+ */
+@font-face {
+  font-family: 'SF Pro Text';
+  font-style: normal;
+  font-weight: 400;
+  src: local('SF Pro Text'), local('SFProText-Regular'),
+       local('Inter'), local('Inter-Regular'),
+       local('-apple-system'), local('BlinkMacSystemFont');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  font-style: normal;
+  font-weight: 500;
+  src: local('SF Pro Text Medium'), local('SFProText-Medium'),
+       local('Inter Medium'), local('Inter-Medium'),
+       local('-apple-system'), local('BlinkMacSystemFont');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  font-style: normal;
+  font-weight: 600;
+  src: local('SF Pro Text Semibold'), local('SFProText-Semibold'),
+       local('Inter SemiBold'), local('Inter-SemiBold'),
+       local('-apple-system'), local('BlinkMacSystemFont');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  font-style: normal;
+  font-weight: 700;
+  src: local('SF Pro Text Bold'), local('SFProText-Bold'),
+       local('Inter Bold'), local('Inter-Bold'),
+       local('-apple-system'), local('BlinkMacSystemFont');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: normal;
+  font-weight: 400;
+  src: local('SF Pro Display'), local('SFProDisplay-Regular'),
+       local('Inter'), local('Inter-Regular'),
+       local('-apple-system'), local('BlinkMacSystemFont');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: normal;
+  font-weight: 500;
+  src: local('SF Pro Display Medium'), local('SFProDisplay-Medium'),
+       local('Inter Medium'), local('Inter-Medium'),
+       local('-apple-system'), local('BlinkMacSystemFont');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: normal;
+  font-weight: 600;
+  src: local('SF Pro Display Semibold'), local('SFProDisplay-Semibold'),
+       local('Inter SemiBold'), local('Inter-SemiBold'),
+       local('-apple-system'), local('BlinkMacSystemFont');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: normal;
+  font-weight: 700;
+  src: local('SF Pro Display Bold'), local('SFProDisplay-Bold'),
+       local('Inter Bold'), local('Inter-Bold'),
+       local('-apple-system'), local('BlinkMacSystemFont');
+  font-display: swap;
+}

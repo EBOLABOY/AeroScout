@@ -1,0 +1,391 @@
+@import "tailwindcss";
+@import "./fonts.css";
+
+:root {
+  /* 字体 - 苹果设计风格 */
+  /* 更新：使用来自 layout.tsx 的 CSS 变量，现在使用 Inter 字体作为替代品 */
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-display: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /* 基础颜色 - 精确匹配苹果设计语言 */
+  --background: #ffffff;
+  --foreground: #1D1D1F;
+
+  /* 主色调 - 苹果官方蓝色 */
+  --primary: #0071E3;
+  --primary-dark: #0051A2;
+  --primary-light: #E9F0FC;
+
+  /* 中性色调 - 苹果风格灰度 */
+  --gray-50: #F5F5F7;
+  --gray-100: #E8E8ED;
+  --gray-200: #D2D2D7;
+  --gray-300: #AEAEB2;
+  --gray-400: #8E8E93;
+  --gray-500: #636366;
+  --gray-600: #48484A;
+  --gray-700: #3A3A3C;
+  --gray-800: #2C2C2E;
+  --gray-900: #1C1C1E;
+
+  /* 语义色彩 - 精确匹配苹果系统颜色 */
+  --success: #34C759; /* 绿色 */
+  --warning: #FF9500; /* 橙色 */
+  --error: #FF3B30;   /* 红色 */
+  --info: #007AFF;    /* 蓝色 */
+  --purple: #AF52DE;  /* 紫色 */
+
+  /* 苹果设计特有颜色 */
+  --teal: #5AC8FA;    /* 浅蓝 */
+  --indigo: #5856D6;  /* 靛蓝 */
+  --pink: #FF2D55;    /* 粉色 */
+}
+
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 暗色模式基础颜色 */
+    --background: #000000;
+    --foreground: #F5F5F7;
+
+    /* 暗色模式主色调 */
+    --primary: #0A84FF;
+    --primary-dark: #0077ED;
+    --primary-light: #0A84FF33;
+
+    /* 暗色模式中性色调 - 苹果风格 */
+    --gray-50: #1C1C1E;
+    --gray-100: #2C2C2E;
+    --gray-200: #3A3A3C;
+    --gray-300: #48484A;
+    --gray-400: #636366;
+    --gray-500: #8E8E93;
+    --gray-600: #AEAEB2;
+    --gray-700: #C7C7CC;
+    --gray-800: #E5E5EA;
+    --gray-900: #F2F2F7;
+
+    /* 暗色模式语义色彩 - 苹果系统颜色 */
+    --success: #30D158; /* 暗色模式绿色 */
+    --warning: #FF9F0A; /* 暗色模式橙色 */
+    --error: #FF453A;   /* 暗色模式红色 */
+    --info: #0A84FF;    /* 暗色模式蓝色 */
+    --purple: #BF5AF2;  /* 暗色模式紫色 */
+
+    /* 暗色模式苹果特有颜色 */
+    --teal: #64D2FF;    /* 暗色模式浅蓝 */
+    --indigo: #5E5CE6;  /* 暗色模式靛蓝 */
+    --pink: #FF375F;    /* 暗色模式粉色 */
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 使用 SF Pro Display 字体用于标题 */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+
+/* 平滑滚动 */
+html {
+  scroll-behavior: smooth;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--gray-100);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-400);
+}
+
+/* 自定义选择文本颜色 */
+::selection {
+  background-color: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+/* 苹果风格动画类 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* 苹果风格过渡效果 */
+.transition-apple {
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.transition-apple-slow {
+  transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* 苹果风格阴影 */
+.shadow-apple-sm {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.shadow-apple {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-apple-md {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.11);
+}
+
+.shadow-apple-lg {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* 苹果风格圆角 */
+.rounded-apple {
+  border-radius: 12px;
+}
+
+.rounded-apple-lg {
+  border-radius: 16px;
+}
+
+.rounded-apple-full {
+  border-radius: 9999px;
+}
+
+/* 浮动动画 */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float 6s ease-in-out 2s infinite;
+}
+
+/* 动画延迟 */
+.animation-delay-100 {
+  animation-delay: 0.1s;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-300 {
+  animation-delay: 0.3s;
+}
+
+.animation-delay-600 {
+  animation-delay: 0.6s;
+}
+
+.animation-delay-800 {
+  animation-delay: 0.8s;
+}
+
+/* 地球旋转动画 - 水平旋转 */
+@keyframes rotate-earth {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+.animate-rotate-earth {
+  animation: rotate-earth 60s linear infinite;
+  transform-style: preserve-3d;
+}
+
+/* 随机飞机移动动画 */
+@keyframes random-plane {
+  0% { transform: translateX(-40px); opacity: 0; }
+  5% { opacity: 0; }
+  10% { opacity: 1; }
+  85% { opacity: 1; }
+  95% { opacity: 0; }
+  100% { transform: translateX(0px); opacity: 0; }
+}
+
+.animate-random-plane {
+  animation: random-plane 8s ease-in-out infinite;
+}
+
+/* 反向随机飞机移动动画 */
+@keyframes random-plane-reverse {
+  0% { transform: translateX(40px); opacity: 0; }
+  5% { opacity: 0; }
+  10% { opacity: 1; }
+  85% { opacity: 1; }
+  95% { opacity: 0; }
+  100% { transform: translateX(0px); opacity: 0; }
+}
+
+.animate-random-plane-reverse {
+  animation: random-plane-reverse 8s ease-in-out infinite;
+}
+
+/* 随机航线生长动画 */
+@keyframes random-grow {
+  0% { transform: scaleX(0); opacity: 0; }
+  10% { opacity: 0.2; }
+  100% { transform: scaleX(1); opacity: 0.6; }
+}
+
+.animate-random-grow {
+  animation: random-grow 8s ease-out infinite;
+}
+
+/* 反向随机航线生长动画 */
+@keyframes random-grow-reverse {
+  0% { transform: scaleX(0); opacity: 0; }
+  10% { opacity: 0.2; }
+  100% { transform: scaleX(1); opacity: 0.6; }
+}
+
+.animate-random-grow-reverse {
+  animation: random-grow-reverse 8s ease-out infinite;
+}
+
+/* 慢速旋转动画 */
+@keyframes slow-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-slow-spin {
+  animation: slow-spin 30s linear infinite;
+}
+
+/* 渐变文本 */
+.bg-clip-text {
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* 进度条动画 */
+@keyframes progress-bar {
+  0% { width: 0%; }
+  20% { width: 20%; }
+  40% { width: 40%; }
+  60% { width: 60%; }
+  80% { width: 80%; }
+  100% { width: 95%; }
+}
+
+.animate-progress-bar {
+  animation: progress-bar 3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* 微弱脉冲动画 */
+@keyframes pulse-subtle {
+  0% { opacity: 1; }
+  50% { opacity: 0.85; }
+  100% { opacity: 1; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+/* 按钮悬停动画 */
+@keyframes button-hover {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.animate-button-hover:hover {
+  animation: button-hover 0.5s ease-in-out;
+}
+
+/* 平滑滑入动画 */
+@keyframes slide-in {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out forwards;
+}
+
+/* 平滑滑出动画 */
+@keyframes slide-out {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(10px); opacity: 0; }
+}
+
+.animate-slide-out {
+  animation: slide-out 0.3s ease-in forwards;
+}
+
+/* 闪烁动画 */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-blink {
+  animation: blink 1.5s ease-in-out infinite;
+}
+
+/* 骨架屏加载动画 */
+@keyframes skeleton-loading {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-skeleton {
+  background: linear-gradient(90deg, var(--gray-100) 25%, var(--gray-200) 50%, var(--gray-100) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}

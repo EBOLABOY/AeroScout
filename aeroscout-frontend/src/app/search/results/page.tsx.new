@@ -1,0 +1,232 @@
+'use client';
+
+import React, { useState, useMemo } from 'react';
+import { useFlightResultsStore, FlightItinerary, AirlineInfo } from '@/store/flightResultsStore';
+import { useRouter } from 'next/navigation';
+import SortControls, { SortConfig } from '@/components/flight/SortControls';
+import FilterControls, { FilterConfig } from '@/components/flight/FilterControls';
+import Button from '@/components/common/Button';
+import { Card } from '@/components/common/Card';
+import Alert from '@/components/common/Alert';
+
+// FlightCard Component - Enhanced for UI/UX
+const FlightCard: React.FC<{ itinerary: FlightItinerary, isComboDeal?: boolean }> = ({ itinerary, isComboDeal }) => {
+  const [showDetails, setShowDetails] = useState(false);
+  const firstSegment = itinerary.segments?.[0];
+  const lastSegment = itinerary.segments?.[itinerary.segments.length - 1];
+
+  const airlineName = firstSegment?.airlineName || '航空公司';
+
+  const formatTime = (timeStr: string | undefined) => {
+    if (!timeStr) return 'N/A';
+    return new Date(timeStr).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
+  const formatDate = (timeStr: string | undefined) => {
+    if (!timeStr) return '';
+    return new Date(timeStr).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+  };
+
+  const departureTime = formatTime(firstSegment?.departureTime);
+  const departureDate = formatDate(firstSegment?.departureTime);
+  const arrivalTime = formatTime(lastSegment?.arrivalTime);
+  const arrivalDate = formatDate(lastSegment?.arrivalTime);
+
+  const formatDuration = (minutes: number | undefined): string => {
+    if (minutes === undefined || minutes === null) return 'N/A';
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h}小时${m > 0 ? ` ${m}分钟` : ''}`;
+  };
+  const totalDuration = formatDuration(itinerary.totalDurationMinutes);
+
+  const departureAirportName = firstSegment?.departureAirportName || '出发机场';
+  const departureAirportCode = firstSegment?.departureAirportCode || 'N/A';
+  const departureCityName = firstSegment?.departureCityName || '';
+  const arrivalAirportName = lastSegment?.arrivalAirportName || '到达机场';
+  const arrivalAirportCode = lastSegment?.arrivalAirportCode || 'N/A';
+  const arrivalCityName = lastSegment?.arrivalCityName || '';
+
+  const price = itinerary.price?.amount ? `¥${itinerary.price.amount.toLocaleString()}` : '价格待定';
+  const numStops = itinerary.segments?.length ? itinerary.segments.length - 1 : 0;
+  const stopsDisplay = itinerary.isDirectFlight ? '直飞' : `${numStops}次中转`;
+
+  // Helper to get city names for multi-segment flights if needed
+  const stopCities = numStops > 0
+    ? itinerary.segments?.slice(0, -1).map(seg => seg.arrivalCityName).join(', ')
+    : '';
+
+  return (
+    <Card className="mb-5 hover:shadow-lg transition-all duration-300 ease-in-out group" hoverable>
+      {/* Header: Airline Info & Price */}
+      <div className="flex justify-between items-start mb-6">
+        <div className="flex items-center">
+          <div className="h-12 w-12 mr-3 bg-[#F5F5F7] rounded-lg flex items-center justify-center text-lg font-medium text-[#86868B] border border-[#E6E6E6]">
+            {airlineName.substring(0, 1)}
+          </div>
+          <div>
+            <span className="font-semibold text-lg text-[#1D1D1F] block">{airlineName}</span>
+            <span className="text-xs text-[#86868B]">{itinerary.segments?.[0]?.flightNumber}</span>
+          </div>
+        </div>
+        <div className="text-right">
+          <span className="text-2xl font-bold text-[#2997FF] group-hover:text-[#0077ED] transition-colors">{price}</span>
+          {isComboDeal && (
+            <span className="block text-xs bg-[#F2E8FF] text-[#9747FF] px-2 py-1 rounded-full mt-1 font-medium">
+              组合推荐
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Body: Flight Details */}
+      <div className="flex items-center justify-between mb-4">
+        {/* Departure */}
+        <div className="flex flex-col items-start">
+          <p className="text-3xl font-medium text-[#1D1D1F]">{departureTime}</p>
+          <p className="text-sm text-[#86868B]" title={departureAirportName}>{departureAirportCode}</p>
+          <p className="text-xs text-[#86868B]">{departureDate}</p>
+          <p className="text-xs text-[#86868B] mt-1">{departureCityName}</p>
+        </div>
+
+        {/* Journey Info: Duration & Stops */}
+        <div className="flex-grow text-center px-6">
+          <p className="text-sm text-[#86868B] mb-1">{totalDuration}</p>
+          <div className="relative my-2">
+            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+              <div className="w-full border-t border-[#D1D1D6] group-hover:border-[#A1A1A6] transition-colors"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <span className={`bg-white px-3 text-sm font-medium ${
+                numStops === 0 
+                  ? 'text-[#34C759]' 
+                  : numStops === 1 
+                    ? 'text-[#FF9500]' 
+                    : 'text-[#FF3B30]'
+              }`}>
+                {stopsDisplay}
+              </span>
+            </div>
+          </div>
+          {numStops > 0 && stopCities && (
+            <p className="text-xs text-[#86868B] truncate" title={`经停: ${stopCities}`}>
+              经停: {stopCities}
+            </p>
+          )}
+        </div>
+
+        {/* Arrival */}
+        <div className="flex flex-col items-end">
+          <p className="text-3xl font-medium text-[#1D1D1F]">{arrivalTime}</p>
+          <p className="text-sm text-[#86868B]" title={arrivalAirportName}>{arrivalAirportCode}</p>
+          <p className="text-xs text-[#86868B]">{arrivalDate}</p>
+          <p className="text-xs text-[#86868B] mt-1">{arrivalCityName}</p>
+        </div>
+      </div>
+
+      {/* 组合航班风险提示 */}
+      {isComboDeal && (
+        <div className="mt-4 p-3 bg-[#FFF8F8] border border-[#FFCCCB] rounded-lg">
+          <div className="flex items-start">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[#FF3B30] mr-2 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-[#1D1D1F]">组合航班风险提示</p>
+              <p className="text-xs text-[#86868B] mt-1">
+                此为系统智能组合的多段航班，非航空公司官方联程。各航段需单独预订，如遇航班延误或取消，可能无法获得航空公司的免费改签或赔偿。
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 详情展开区域 */}
+      {showDetails && (
+        <div className="mt-4 pt-4 border-t border-[#E6E6E6] animate-fadeIn">
+          <h3 className="text-md font-medium text-[#1D1D1F] mb-3">航段详情</h3>
+          <div className="space-y-4">
+            {itinerary.segments?.map((segment, index) => (
+              <div key={segment.id || index} className="flex items-start p-3 bg-[#F5F5F7] rounded-lg">
+                <div className="mr-3 flex-shrink-0">
+                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center border border-[#E6E6E6] text-xs font-medium text-[#1D1D1F]">
+                    {index + 1}
+                  </div>
+                </div>
+                <div className="flex-grow">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm font-medium text-[#1D1D1F]">
+                      {segment.airlineName} {segment.flightNumber}
+                    </span>
+                    <span className="text-xs text-[#86868B]">
+                      {formatDuration(segment.durationMinutes)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs text-[#86868B]">
+                    <div>
+                      <p><strong>{formatTime(segment.departureTime)}</strong> {segment.departureAirportCode}</p>
+                      <p>{segment.departureCityName} - {segment.departureAirportName}</p>
+                    </div>
+                    <div className="text-right">
+                      <p><strong>{formatTime(segment.arrivalTime)}</strong> {segment.arrivalAirportCode}</p>
+                      <p>{segment.arrivalCityName} - {segment.arrivalAirportName}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* 舱位信息 */}
+          <div className="mt-4 text-xs text-[#86868B]">
+            <p>舱位: {itinerary.segments?.[0]?.cabinClass === 'ECONOMY' ? '经济舱' : 
+                     itinerary.segments?.[0]?.cabinClass === 'PREMIUM_ECONOMY' ? '超级经济舱' :
+                     itinerary.segments?.[0]?.cabinClass === 'BUSINESS' ? '商务舱' :
+                     itinerary.segments?.[0]?.cabinClass === 'FIRST' ? '头等舱' : '未知'}</p>
+          </div>
+          
+          {/* 预订链接 */}
+          {itinerary.deepLink && (
+            <div className="mt-4 flex justify-end">
+              <a 
+                href={itinerary.deepLink} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-4 py-2 bg-[#0071E3] text-white text-sm font-medium rounded-full hover:bg-[#0077ED] transition-colors"
+              >
+                前往预订
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 查看详情按钮 */}
+      <div className="mt-4 pt-4 border-t border-[#E6E6E6] flex justify-between items-center">
+        <button 
+          className="text-sm text-[#2997FF] hover:text-[#0077ED] transition-colors font-medium focus:outline-none flex items-center"
+          onClick={() => setShowDetails(!showDetails)}
+        >
+          {showDetails ? '收起详情' : '查看详情'}
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className={`h-4 w-4 ml-1 transition-transform ${showDetails ? 'rotate-180' : ''}`} 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        
+        {/* 价格标签 */}
+        <div className="text-xs text-[#86868B]">
+          {itinerary.price?.currency === 'CNY' ? '人民币' : itinerary.price?.currency}
+        </div>
+      </div>
+    </Card>
+  );
+};

@@ -1,0 +1,19 @@
+fastapi
+uvicorn[standard]
+httpx
+sqlalchemy
+databases[aiosqlite] # Changed from sqlite to aiosqlite for async tests
+alembic
+pydantic[email] # Changed to include email validation
+pydantic-settings # Added for BaseSettings
+python-dotenv
+passlib[bcrypt]
+python-jose[cryptography]
+python-multipart # Added for form data
+celery[redis]>=5.0
+redis>=4.5.0  # 添加Redis异步支持
+
+# Test dependencies
+pytest
+pytest-asyncio
+pytest-mock
