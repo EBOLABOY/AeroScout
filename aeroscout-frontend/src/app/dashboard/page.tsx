@@ -44,10 +44,10 @@ const getGreetingByTime = (): string => {
 // 格式化日期
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
-  return new Intl.DateTimeFormat('zh-CN', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   }).format(date);
 };
 
@@ -100,7 +100,7 @@ const getRelativeTime = (dateTimeString: string): string => {
   const date = new Date(dateTimeString);
   const now = new Date();
   const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-  
+
   if (diffInDays === 0) {
     return '今天';
   } else if (diffInDays === 1) {
@@ -416,7 +416,7 @@ const ApiUsageDetails = ({ apiUsage }: { apiUsage: ApiUsage }) => {
   // 计算POI和Flight调用的百分比
   const poiCallsPercent = Math.round((apiUsage.poiCallsToday / apiUsage.poiDailyLimit) * 100);
   const flightCallsPercent = Math.round((apiUsage.flightCallsToday / apiUsage.flightDailyLimit) * 100);
-  
+
   // 为柱状图准备数据
   const barData = [
     {
@@ -541,25 +541,25 @@ const DashboardPage = () => {
   const { currentUser, logout } = useAuthStore();
   const { showAlert } = useAlertStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
-  
+
   // 数据状态
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [apiUsage, setApiUsage] = useState<ApiUsage | null>(null);
   const [apiUsageHistory, setApiUsageHistory] = useState<DailyApiUsage[]>([]);
   const [invitationCodes, setInvitationCodes] = useState<InvitationCode[]>([]);
-  
+
   // 筛选和排序状态
   const [fromFilter, setFromFilter] = useState('');
   const [toFilter, setToFilter] = useState('');
   const [sortBy, setSortBy] = useState('searched_at_desc');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  
+
   // 加载状态
   const [isLoadingSearches, setIsLoadingSearches] = useState(true);
   const [isLoadingUsage, setIsLoadingUsage] = useState(true);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isLoadingCodes, setIsLoadingCodes] = useState(true);
-  
+
   // 错误状态
   const [searchesError, setSearchesError] = useState<string | null>(null);
   const [usageError, setUsageError] = useState<string | null>(null);
@@ -572,7 +572,7 @@ const DashboardPage = () => {
       try {
         setIsLoadingSearches(true);
         const response = await getUserRecentSearches();
-        
+
         // 转换数据格式以匹配前端组件需要的格式
         const formattedSearches = response.data.map(item => ({
           id: item.id,
@@ -583,7 +583,7 @@ const DashboardPage = () => {
           passengers: item.passengers,
           isFavorite: item.is_favorite || false
         }));
-        
+
         setRecentSearches(formattedSearches);
         setSearchesError(null);
       } catch (error) {
@@ -599,7 +599,7 @@ const DashboardPage = () => {
         setIsLoadingUsage(true);
         const response = await getUserApiUsageStats();
         const data = response.data;
-        
+
         // 计算总调用次数、剩余次数和百分比
         const totalPoiCalls = data.poi_daily_limit;
         const totalFlightCalls = data.flight_daily_limit;
@@ -609,7 +609,7 @@ const DashboardPage = () => {
         const totalUsedCalls = usedPoiCalls + usedFlightCalls;
         const remainingCalls = totalCalls - totalUsedCalls;
         const usagePercentage = Math.round((totalUsedCalls / totalCalls) * 100);
-        
+
         // 转换为前端需要的格式
         setApiUsage({
           poiCallsToday: data.poi_calls_today,
@@ -622,7 +622,7 @@ const DashboardPage = () => {
           resetDate: data.reset_date,
           isNearLimit: data.is_near_limit || usagePercentage > 80
         });
-        
+
         setUsageError(null);
       } catch (error) {
         console.error('获取API使用统计失败:', error);
@@ -636,7 +636,7 @@ const DashboardPage = () => {
       try {
         setIsLoadingCodes(true);
         const response = await getUserInvitationCodes();
-        
+
         // 转换数据格式
         const formattedCodes = response.data.map(item => ({
           id: item.id,
@@ -645,7 +645,7 @@ const DashboardPage = () => {
           createdAt: item.created_at,
           usedAt: item.used_at
         }));
-        
+
         setInvitationCodes(formattedCodes);
         setCodesError(null);
       } catch (error) {
@@ -662,7 +662,7 @@ const DashboardPage = () => {
         // 尝试从API获取数据
         try {
           const response = await getUserApiUsageHistory(7);
-          
+
           // 转换数据格式
           const formattedHistory = response.data.map(item => ({
             date: item.date,
@@ -670,15 +670,14 @@ const DashboardPage = () => {
             flightCalls: item.flight_calls,
             totalCalls: item.total_calls
           }));
-          
+
           setApiUsageHistory(formattedHistory);
           setHistoryError(null);
         } catch (apiError) {
           console.error('获取API使用历史失败:', apiError);
-          // 使用模拟数据作为备用
-          const { apiUsageHistory } = await import('@/__mocks__/mockDashboardData');
-          setApiUsageHistory(apiUsageHistory);
-          setHistoryError('无法获取实时API使用历史，显示模拟数据');
+          // 设置空数组，不使用模拟数据
+          setApiUsageHistory([]);
+          setHistoryError('无法获取API使用历史数据');
         }
       } finally {
         setIsLoadingHistory(false);
@@ -692,7 +691,7 @@ const DashboardPage = () => {
       fetchInvitationCodes();
     }
   }, [isAuthenticated]);
-  
+
   // 处理搜索筛选和排序
   const handleFilterChange = (from: string, to: string) => {
     setFromFilter(from);
@@ -720,12 +719,12 @@ const DashboardPage = () => {
   ) => {
     try {
       setIsLoadingSearches(true);
-      
+
       // 尝试从API获取数据
       try {
         // 解析排序选项
         const [sortField, sortOrder] = sort.split('_');
-        
+
         const response = await getFilteredSearches({
           from,
           to,
@@ -733,7 +732,7 @@ const DashboardPage = () => {
           order: sortOrder as "asc" | "desc",
           favorites_only: favoritesOnly
         });
-        
+
         // 转换数据格式
         const formattedSearches = response.data.map(item => ({
           id: item.id,
@@ -744,31 +743,31 @@ const DashboardPage = () => {
           passengers: item.passengers,
           isFavorite: item.is_favorite || false
         }));
-        
+
         setRecentSearches(formattedSearches);
         setSearchesError(null);
       } catch (apiError) {
         console.error('筛选搜索记录失败:', apiError);
-        
+
         // 本地筛选和排序逻辑作为备用
         let filteredSearches = [...recentSearches];
-        
+
         if (from) {
           filteredSearches = filteredSearches.filter(
             search => search.from.toLowerCase().includes(from.toLowerCase())
           );
         }
-        
+
         if (to) {
           filteredSearches = filteredSearches.filter(
             search => search.to.toLowerCase().includes(to.toLowerCase())
           );
         }
-        
+
         if (favoritesOnly) {
           filteredSearches = filteredSearches.filter(search => search.isFavorite);
         }
-        
+
         const [field, order] = sort.split('_');
         filteredSearches.sort((a, b) => {
           if (field === 'searched_at') {
@@ -781,7 +780,7 @@ const DashboardPage = () => {
               : new Date(b.date).getTime() - new Date(a.date).getTime();
           }
         });
-        
+
         setRecentSearches(filteredSearches);
         setSearchesError('使用本地筛选（API调用失败）');
       }
@@ -795,7 +794,7 @@ const DashboardPage = () => {
     try {
       showAlert('正在删除搜索记录...', 'info');
       await deleteSearchRecord(id);
-      
+
       // 从本地状态中移除
       setRecentSearches(current => current.filter(search => search.id !== id));
       showAlert('搜索记录已删除', 'success');
@@ -809,7 +808,7 @@ const DashboardPage = () => {
   const handleToggleFavorite = async (id: string, isFavorite: boolean) => {
     try {
       await toggleSearchFavorite(id, isFavorite);
-      
+
       // 更新本地状态
       setRecentSearches(current =>
         current.map(search =>
@@ -818,7 +817,7 @@ const DashboardPage = () => {
             : search
         )
       );
-      
+
       showAlert(
         isFavorite ? '已添加到收藏' : '已从收藏中移除',
         'success'
@@ -844,7 +843,7 @@ const DashboardPage = () => {
           <Link href="/dashboard" className="flex items-center">
             <span className="text-xl font-semibold text-[#1D1D1F]">AeroScout</span>
           </Link>
-          
+
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
@@ -854,22 +853,22 @@ const DashboardPage = () => {
                 {currentUser?.email?.charAt(0).toUpperCase() || 'U'}
               </div>
               <span>{currentUser?.email}</span>
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                width="16" 
-                height="16" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
                 strokeLinejoin="round"
                 className={`transition-transform duration-300 ${showUserMenu ? 'rotate-180' : ''}`}
               >
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </button>
-            
+
             {showUserMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-apple shadow-apple-sm border border-[#E8E8ED] py-1 z-20">
                 {/* 管理员面板链接 - 只对管理员显示 */}
@@ -937,19 +936,19 @@ const DashboardPage = () => {
                 </div>
                 <div className="mt-4 md:mt-0">
                   <Link href="/search">
-                    <Button 
-                      variant="primary" 
+                    <Button
+                      variant="primary"
                       size="lg"
                       icon={
-                        <svg 
-                          xmlns="http://www.w3.org/2000/svg" 
-                          width="20" 
-                          height="20" 
-                          viewBox="0 0 24 24" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          strokeWidth="2" 
-                          strokeLinecap="round" 
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
                           strokeLinejoin="round"
                         >
                           <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
@@ -988,7 +987,7 @@ const DashboardPage = () => {
                     onFavoritesToggle={handleFavoritesToggle}
                     showFavoritesOnly={showFavoritesOnly}
                   />
-                  
+
                   {isLoadingSearches ? (
                     <div className="space-y-4">
                       {Array.from({ length: 3 }).map((_, index) => (
@@ -1111,8 +1110,8 @@ const DashboardPage = () => {
                 </CardContent>
                 <CardFooter withBorder>
                   <Link href="/settings" className="w-full">
-                    <Button 
-                      variant="tertiary" 
+                    <Button
+                      variant="tertiary"
                       size="sm"
                       fullWidth
                     >
@@ -1121,7 +1120,7 @@ const DashboardPage = () => {
                   </Link>
                 </CardFooter>
               </Card>
-              
+
               {/* API使用趋势图表 */}
               {isLoadingHistory ? (
                 <div className="mt-6">
@@ -1152,14 +1151,14 @@ const DashboardPage = () => {
                   <ApiUsageTrendChart usageHistory={apiUsageHistory} />
                 </div>
               ) : null}
-              
+
               {/* API使用详情 */}
               {apiUsage && (
                 <div className="mt-6">
                   <ApiUsageDetails apiUsage={apiUsage} />
                 </div>
               )}
-              
+
               {/* 邀请码 */}
               <Card variant="elevated" className="mt-6">
                 <CardHeader withBorder>

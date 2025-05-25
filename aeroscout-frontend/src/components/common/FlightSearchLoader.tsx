@@ -11,9 +11,9 @@ interface FlightSearchLoaderProps {
   };
 }
 
-const FlightSearchLoader: React.FC<FlightSearchLoaderProps> = ({ 
-  isVisible, 
-  searchParams 
+const FlightSearchLoader: React.FC<FlightSearchLoaderProps> = ({
+  isVisible,
+  searchParams
 }) => {
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
@@ -63,7 +63,7 @@ const FlightSearchLoader: React.FC<FlightSearchLoaderProps> = ({
       clearInterval(stepInterval);
       clearInterval(timeInterval);
     };
-  }, [isVisible]);
+  }, [isVisible, searchSteps.length]);
 
   if (!isVisible) return null;
 
@@ -101,7 +101,7 @@ const FlightSearchLoader: React.FC<FlightSearchLoaderProps> = ({
             <span>{Math.round(progress)}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-            <div 
+            <div
               className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-300 ease-out"
               style={{ width: `${progress}%` }}
             >
@@ -130,10 +130,10 @@ const FlightSearchLoader: React.FC<FlightSearchLoaderProps> = ({
           {searchSteps.map((step, index) => (
             <div key={index} className="flex items-center space-x-3">
               <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                index < currentStep 
-                  ? 'bg-green-500' 
-                  : index === currentStep 
-                    ? 'bg-blue-500 animate-pulse' 
+                index < currentStep
+                  ? 'bg-green-500'
+                  : index === currentStep
+                    ? 'bg-blue-500 animate-pulse'
                     : 'bg-gray-200'
               }`}>
                 {index < currentStep && (

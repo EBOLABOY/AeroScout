@@ -14,7 +14,7 @@ const ZIndexTestPage: React.FC = () => {
         <h1 className="text-3xl font-bold text-[#1D1D1F] mb-8 text-center">
           Z-Index 层级测试页面
         </h1>
-        
+
         <div className="space-y-8">
           {/* 测试场景1: 普通容器 */}
           <div className="bg-white p-6 rounded-apple shadow-apple">
@@ -79,7 +79,7 @@ const ZIndexTestPage: React.FC = () => {
                 />
               </div>
             </div>
-            
+
             {/* 重叠的遮挡元素 */}
             <div className="absolute top-20 left-4 right-4 h-32 bg-gradient-to-r from-[#FF9500]/20 to-[#0071E3]/20 rounded-apple border border-[#E5E5EA] flex items-center justify-center z-10">
               <span className="text-[#86868B] font-medium">
@@ -176,7 +176,7 @@ const ZIndexTestPage: React.FC = () => {
 
         <div className="mt-12 text-center">
           <p className="text-sm text-[#86868B]">
-            测试说明：在每个场景中输入机场名称（如"北京"、"上海"），检查下拉菜单是否正确显示在所有元素之上
+            测试说明：在每个场景中输入机场名称（如&ldquo;北京&rdquo;、&ldquo;上海&rdquo;），检查下拉菜单是否正确显示在所有元素之上
           </p>
         </div>
       </div>

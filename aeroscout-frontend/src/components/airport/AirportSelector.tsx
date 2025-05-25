@@ -70,7 +70,7 @@ const AirportSelector: React.FC<AirportSelectorProps> = ({
     } else {
       console.log(`[AirportSelector] useEffect[value] at ${currentTime}: skipping update - selectingRef is true`);
     }
-  }, [value]); // 只依赖value，不依赖inputValue
+  }, [value, inputValue]); // 添加inputValue依赖
 
   // 处理搜索查询
   const debouncedQuery = useDebounce(inputValue, 300);
@@ -251,6 +251,7 @@ const AirportSelector: React.FC<AirportSelectorProps> = ({
           aria-expanded={isDropdownOpen}
           aria-haspopup="listbox"
           aria-autocomplete="list"
+          aria-controls="airport-dropdown"
         />
 
         {/* 右侧图标 */}
@@ -278,7 +279,7 @@ const AirportSelector: React.FC<AirportSelectorProps> = ({
 
       {/* 下拉菜单 */}
       {isDropdownOpen && (
-        <div className="absolute z-[99999] left-0 right-0 mt-1 bg-white border border-[#D2D2D7] rounded-apple shadow-apple-lg max-h-64 overflow-hidden animate-slideDown min-w-[400px]" style={{ zIndex: 99999 }}>
+        <div id="airport-dropdown" className="absolute z-[99999] left-0 right-0 mt-1 bg-white border border-[#D2D2D7] rounded-apple shadow-apple-lg max-h-64 overflow-hidden animate-slideDown min-w-[400px]" style={{ zIndex: 99999 }}>
           {/* 搜索状态指示器 */}
           {isLoading && (
             <div className="px-4 py-3 border-b border-[#F5F5F7]">

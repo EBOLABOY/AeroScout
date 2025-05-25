@@ -94,7 +94,9 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
       {options.map((option, index) => (
         <button
           key={option.value}
-          ref={el => (segmentRefs.current[index] = el)}
+          ref={el => {
+            segmentRefs.current[index] = el;
+          }}
           className={`
             relative flex-1 flex items-center justify-center px-4 rounded-full
             ${sizeStyles[size].segment}
