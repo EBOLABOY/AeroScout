@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # Redis服务
+  redis:
+    image: redis:7-alpine
+    container_name: aeroscout-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - aeroscout-network
+
+  # 后端API服务
+  backend:
+    build: 
+      context: ./aeroscouthq_backend
+      dockerfile: Dockerfile
+    container_name: aeroscout-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./aeroscout.db
+      - SECRET_KEY=${SECRET_KEY:-your_secret_key_here_please_change_me}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - REDIS_URL=redis://redis:6379/2
+      - LOG_LEVEL=WARNING
+      - ENABLE_SEARCH_DEBUG_LOGS=false
+    volumes:
+      - backend_data:/app/aeroscout.db
+      - backend_cache:/app/cache
+      - backend_cookies:/app/trip_cookies.json
+      - backend_tokens:/app/kiwi_token.json
+    depends_on:
+      - redis
+    networks:
+      - aeroscout-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery工作进程
+  celery:
+    build: 
+      context: ./aeroscouthq_backend
+      dockerfile: Dockerfile
+    container_name: aeroscout-celery
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./aeroscout.db
+      - SECRET_KEY=${SECRET_KEY:-your_secret_key_here_please_change_me}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - REDIS_URL=redis://redis:6379/2
+      - LOG_LEVEL=WARNING
+      - ENABLE_SEARCH_DEBUG_LOGS=false
+    volumes:
+      - backend_data:/app/aeroscout.db
+      - backend_cache:/app/cache
+      - backend_cookies:/app/trip_cookies.json
+      - backend_tokens:/app/kiwi_token.json
+    depends_on:
+      - redis
+      - backend
+    networks:
+      - aeroscout-network
+    command: ["celery", "-A", "app.celery_worker", "worker", "--loglevel=info", "--pool=solo"]
+
+  # 前端服务
+  frontend:
+    build: 
+      context: ./aeroscout-frontend
+      dockerfile: Dockerfile
+    container_name: aeroscout-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://47.79.39.147:8000
+    depends_on:
+      - backend
+    networks:
+      - aeroscout-network
+
+volumes:
+  redis_data:
+  backend_data:
+  backend_cache:
+  backend_cookies:
+  backend_tokens:
+
+networks:
+  aeroscout-network:
+    driver: bridge
