@@ -1,13 +1,13 @@
+@import "./fonts.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import "./fonts.css";
 
 :root {
   /* 字体 - 苹果设计风格 */
   /* 更新：使用来自 layout.tsx 的 CSS 变量，现在使用 Inter 字体作为替代品 */
-  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-display: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', '微软雅黑', 'SimSun', '宋体', Roboto, Helvetica, Arial, sans-serif;
+  --font-display: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', '微软雅黑', 'SimSun', '宋体', Roboto, Helvetica, Arial, sans-serif;
 
   /* 基础颜色 - 精确匹配苹果设计语言 */
   --background: #ffffff;
@@ -87,6 +87,16 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* 防止页面拖动时出现空白 */
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* 防止页面被拖动 */
+html, body {
+  overscroll-behavior: none;
+  -webkit-overscroll-behavior: none;
+  -ms-overscroll-behavior: none;
 }
 
 /* 使用 SF Pro Display 字体用于标题 */
@@ -390,4 +400,237 @@ html {
   background: linear-gradient(90deg, var(--gray-100) 25%, var(--gray-200) 50%, var(--gray-100) 75%);
   background-size: 200% 100%;
   animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+/* 新增：搜索页面专用动画 */
+
+/* 渐变背景动画 */
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  background-size: 400% 400%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+/* 浮动粒子动画 */
+@keyframes float-particles {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-30px) rotate(120deg); }
+  66% { transform: translateY(15px) rotate(240deg); }
+}
+
+.animate-float-particles {
+  animation: float-particles 20s ease-in-out infinite;
+}
+
+/* 光晕脉冲动画 */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.1),
+                0 0 40px rgba(255, 255, 255, 0.05),
+                0 0 60px rgba(255, 255, 255, 0.02);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.2),
+                0 0 60px rgba(255, 255, 255, 0.1),
+                0 0 90px rgba(255, 255, 255, 0.05);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 4s ease-in-out infinite;
+}
+
+/* 按钮光效扫过动画 */
+@keyframes shimmer {
+  0% { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(200%) skewX(-15deg); }
+}
+
+.animate-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-shimmer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+/* 卡片悬浮动画 */
+@keyframes card-hover {
+  0% { transform: translateY(0px) scale(1); }
+  100% { transform: translateY(-8px) scale(1.02); }
+}
+
+.animate-card-hover:hover {
+  animation: card-hover 0.3s ease-out forwards;
+}
+
+/* 文字打字机效果 */
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+.animate-typewriter {
+  overflow: hidden;
+  border-right: 2px solid;
+  white-space: nowrap;
+  animation: typewriter 3s steps(40, end);
+}
+
+/* 波纹扩散动画 */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.animate-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-ripple::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  animation: ripple 0.6s ease-out;
+}
+
+/* 3D 翻转动画 */
+@keyframes flip-3d {
+  0% { transform: perspective(400px) rotateY(0); }
+  100% { transform: perspective(400px) rotateY(360deg); }
+}
+
+.animate-flip-3d {
+  animation: flip-3d 1s ease-in-out;
+}
+
+/* 弹性缩放动画 */
+@keyframes elastic-scale {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.animate-elastic-scale {
+  animation: elastic-scale 0.6s ease-in-out;
+}
+
+/* 渐变文字动画 */
+@keyframes gradient-text {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.animate-gradient-text {
+  background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #667eea);
+  background-size: 400% 400%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-text 3s ease infinite;
+}
+
+/* 星星闪烁动画 */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.animate-twinkle {
+  animation: twinkle 2s ease-in-out infinite;
+}
+
+/* 延迟动画类 */
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-500 { animation-delay: 0.5s; }
+.delay-700 { animation-delay: 0.7s; }
+.delay-1000 { animation-delay: 1s; }
+
+/* 玻璃态效果 */
+.glass-effect {
+  background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.15) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.3);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* 输入框聚焦效果 */
+.input-focus-glow:focus {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+  transform: scale(1.02);
+  transition: all 0.3s ease;
+}
+
+/* 按钮悬停光效 */
+.button-glow:hover {
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px) scale(1.05);
+}
+
+/* 磨砂玻璃背景 */
+.frosted-glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* 防止页面拖动时出现空白的额外样式 */
+.no-overscroll {
+  overscroll-behavior: none;
+  -webkit-overscroll-behavior: none;
+  -ms-overscroll-behavior: none;
+}
+
+/* 确保背景始终覆盖整个视窗 */
+.full-viewport-bg {
+  min-height: 100vh;
+  min-height: 100dvh; /* 动态视窗高度 */
+  width: 100vw;
+  position: relative;
+}
+
+/* 固定背景层 */
+.fixed-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh; /* 动态视窗高度 */
+  z-index: -1;
 }

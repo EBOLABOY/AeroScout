@@ -9,6 +9,7 @@ users_table = Table(
     "users",
     metadata,
     Column("id", Integer, primary_key=True),
+    Column("username", String(100), nullable=False),
     Column("email", String(255), unique=True, index=True, nullable=False),
     Column("hashed_password", String(255), nullable=False),
     Column("is_admin", Boolean, default=False, nullable=False),

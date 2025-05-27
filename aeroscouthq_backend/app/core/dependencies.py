@@ -30,19 +30,19 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> Optional[dict
     try:
         # 解码访问令牌
         payload: Optional[dict] = decode_access_token(token)
-        
+
         if payload is None:
             logger.error(
                 "decode_access_token returned None. Token might be invalid, expired, missing, or malformed."
             )
             raise credentials_exception
-        
+
         # 从 payload 中获取用户邮箱
         email: str = payload.get("sub")
         if email is None:
             logger.error("Email ('sub') not found in token payload.")
             raise credentials_exception
-        
+
         # 创建 token_data 对象
         token_data = TokenData(email=email)
 
@@ -58,7 +58,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> Optional[dict
     if user is None:
         logger.error(f"User not found in database: {token_data.email}")
         raise credentials_exception
-    
+
     # 将用户信息转换为字典格式
     return dict(user)
 
@@ -69,29 +69,29 @@ async def get_current_user_optional(authorization: Optional[str] = Header(None))
     """
     if not authorization:
         return None
-    
+
     # 提取Bearer token
     if not authorization.startswith("Bearer "):
         return None
-    
+
     token = authorization.replace("Bearer ", "")
     if not token:
         return None
-    
+
     try:
         # 解码访问令牌
         payload: Optional[dict] = decode_access_token(token)
-        
+
         if payload is None:
             logger.warning("decode_access_token returned None for optional auth")
             return None
-        
+
         # 从 payload 中获取用户邮箱
         email: str = payload.get("sub")
         if email is None:
             logger.warning("Email ('sub') not found in token payload for optional auth")
             return None
-        
+
         # 创建 token_data 对象
         token_data = TokenData(email=email)
 
@@ -100,10 +100,10 @@ async def get_current_user_optional(authorization: Optional[str] = Header(None))
         if user is None:
             logger.warning(f"User not found in database for optional auth: {token_data.email}")
             return None
-        
+
         # 将用户信息转换为字典格式
         return dict(user)
-        
+
     except JWTError:
         logger.warning("JWTError occurred during optional token decoding")
         return None
@@ -150,7 +150,7 @@ async def get_current_admin_user(current_user: dict = Depends(get_current_user))
     # Ensure the key 'is_admin' exists in the dict returned by get_current_user
     if not current_user.get("is_admin"): # Assuming 'is_admin' is the field name
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="The user does not have admin privileges"
         )
 
@@ -166,12 +166,13 @@ class RateLimiter:
         # Dynamically get the limit from settings based on limit_type
         # Example: if limit_type is 'poi', it looks for settings.POI_DAILY_LIMIT
         # Falls back to a default if the specific limit isn't defined (optional, adjust as needed)
-        default_limit = getattr(settings, "DEFAULT_API_CALL_LIMIT", 100) # Provide a fallback default
+        default_limit = getattr(settings, "DEFAULT_API_CALL_LIMIT", 15) # Provide a fallback default
         self.daily_limit = getattr(settings, f"{limit_type.upper()}_DAILY_LIMIT", default_limit)
 
     async def __call__(self, current_user: UserResponse = Depends(get_current_active_user)):
         """
         Checks the user's API call count against the specific limit using rate_limit_service.
+        管理员用户不受限制。
 
         Args:
             current_user: The currently authenticated and active user.
@@ -179,6 +180,10 @@ class RateLimiter:
         Raises:
             HTTPException(429): If the rate limit is exceeded.
         """
+        # 管理员用户不受API调用限制
+        if current_user.is_admin:
+            return
+
         # Call the rate limit service, passing the dynamically determined limit
         await rate_limit_service.check_and_update_limit(
             user=current_user,

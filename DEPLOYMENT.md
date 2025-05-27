@@ -1,8 +1,10 @@
 # AeroScout 生产环境部署指南
 
-## 服务器信息
-- **IPv4地址**: 47.79.39.147
-- **IPv6地址**: 240b:4009:25a:1801:ffff:64f7:fd92:e919
+## 部署信息
+- **域名**: AeroScout.izlx.de
+- **前端**: https://AeroScout.izlx.de
+- **API**: https://AeroScout.izlx.de/api
+- **文档**: https://AeroScout.izlx.de/docs
 
 ## 系统要求
 
@@ -65,9 +67,28 @@ nano .env
 
 **必须修改的配置项：**
 - `SECRET_KEY`: 设置为强密码
-- `NEXT_PUBLIC_API_URL`: 确认为正确的后端地址
+- `NEXT_PUBLIC_API_URL`: 确认为正确的后端地址 (https://AeroScout.izlx.de/api)
 
 ### 4. 部署应用
+
+#### **首次部署（推荐）**
+
+```bash
+# Linux/macOS
+chmod +x first-time-deploy.sh
+./first-time-deploy.sh
+
+# Windows
+first-time-deploy.bat
+```
+
+首次部署脚本会自动：
+- 配置环境变量
+- 运行数据库迁移
+- 创建默认管理员账户
+- 启动所有服务
+
+#### **手动部署**
 
 ```bash
 # 给部署脚本执行权限
@@ -77,14 +98,14 @@ chmod +x deploy.sh
 ./deploy.sh
 ```
 
-或者手动部署：
+或者完全手动：
 
 ```bash
-# 构建并启动服务
-docker-compose -f docker-compose.prod.yml up -d --build
+# 构建并启动服务（使用Nginx反向代理）
+docker-compose -f docker-compose.nginx.yml up -d --build
 
 # 查看服务状态
-docker-compose -f docker-compose.prod.yml ps
+docker-compose -f docker-compose.nginx.yml ps
 ```
 
 ### 5. 配置防火墙
@@ -94,16 +115,12 @@ docker-compose -f docker-compose.prod.yml ps
 sudo ufw allow 22    # SSH
 sudo ufw allow 80    # HTTP
 sudo ufw allow 443   # HTTPS
-sudo ufw allow 3000  # 前端
-sudo ufw allow 8000  # 后端API
 sudo ufw enable
 
 # CentOS/RHEL
 sudo firewall-cmd --permanent --add-port=22/tcp
 sudo firewall-cmd --permanent --add-port=80/tcp
 sudo firewall-cmd --permanent --add-port=443/tcp
-sudo firewall-cmd --permanent --add-port=3000/tcp
-sudo firewall-cmd --permanent --add-port=8000/tcp
 sudo firewall-cmd --reload
 ```
 
@@ -111,9 +128,44 @@ sudo firewall-cmd --reload
 
 部署完成后，您可以通过以下地址访问：
 
-- **前端应用**: http://47.79.39.147:3000
-- **后端API**: http://47.79.39.147:8000
-- **API文档**: http://47.79.39.147:8000/docs
+- **前端应用**: https://AeroScout.izlx.de
+- **后端API**: https://AeroScout.izlx.de/api
+- **API文档**: https://AeroScout.izlx.de/docs
+
+### SSL证书配置
+
+首次部署后需要配置SSL证书：
+
+```bash
+# 安装certbot
+sudo apt install certbot
+
+# 获取SSL证书
+sudo certbot certonly --webroot -w /var/www/certbot -d AeroScout.izlx.de --email 1242772513@izlx.de --agree-tos
+
+# 重启Nginx
+docker-compose -f docker-compose.nginx.yml restart nginx
+```
+
+或者使用提供的脚本：
+
+```bash
+chmod +x setup-ssl-simple.sh
+./setup-ssl-simple.sh
+```
+
+## 默认管理员账户
+
+首次部署后，系统会自动创建一个默认管理员账户：
+
+- **邮箱**: 1242772513@qq.com
+- **密码**: 1242772513
+- **权限**: 管理员
+
+**⚠️ 重要提醒**：
+1. 请在首次登录后立即修改默认密码
+2. 该账户拥有完整的管理员权限
+3. 可以创建邀请码和管理其他用户
 
 ## 监控和维护
 

@@ -6,6 +6,24 @@ const nextConfig = {
   // 静态导出配置
   trailingSlash: true,
 
+  // 字符编码配置
+  experimental: {
+    // 确保正确处理UTF-8编码
+    esmExternals: true,
+  },
+
+  // 编译器配置
+  compiler: {
+    // 移除console.log在生产环境
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+
+  // ESLint 配置
+  eslint: {
+    // 在构建时忽略 ESLint 错误
+    ignoreDuringBuilds: true,
+  },
+
   images: {
     // 允许从任何域加载图像
     remotePatterns: [

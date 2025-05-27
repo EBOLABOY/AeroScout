@@ -84,7 +84,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://47.79.39.147:8000
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://AeroScout.izlx.de/api}
       - HOSTNAME=0.0.0.0
     depends_on:
       - backend

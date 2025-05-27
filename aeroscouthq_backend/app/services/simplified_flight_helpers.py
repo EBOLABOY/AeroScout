@@ -1,764 +1,697 @@
-"""
-简化航班搜索服务的辅助方法
-"""
-
+import asyncio
 import json
 import logging
-import os
-from datetime import datetime
+import os # os 模块仍然可能用于其他目的，但 save_to_file 会被移除
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 import httpx
 
+
+# 为了独立运行，我们用一个简单的Mock类
+class MockFlightSearchRequest:
+    def __init__(self, **kwargs):
+        self.origin_iata = kwargs.get("origin_iata")
+        self.destination_iata = kwargs.get("destination_iata")
+        self.departure_date_from = kwargs.get("departure_date_from")
+        self.departure_date_to = kwargs.get("departure_date_to")
+        self.adults = kwargs.get("adults", 1)
+        self.children = kwargs.get("children", 0)
+        self.infants = kwargs.get("infants", 0)
+        self.cabin_class = kwargs.get("cabin_class", "ECONOMY")
+        self.preferred_currency = kwargs.get("preferred_currency", "cny")
+        self.is_one_way = kwargs.get("is_one_way", True)
+        self.return_date_from = kwargs.get("return_date_from")
+        self.return_date_to = kwargs.get("return_date_to")
+        self.adults_hold_bags = kwargs.get("adults_hold_bags", [0])
+        self.adults_hand_bags = kwargs.get("adults_hand_bags", [1])
+
+    def model_dump(self): # 模拟Pydantic的model_dump
+        return self.__dict__
+
+    def copy(self, update: Dict[str, Any]): # 模拟Pydantic的copy
+        new_data = self.model_dump()
+        new_data.update(update)
+        return MockFlightSearchRequest(**new_data)
+
+
 logger = logging.getLogger(__name__)
+# 配置日志（如果尚未在其他地方配置）
+logging.basicConfig(
+    level=logging.INFO, # 可以根据需要调整为 DEBUG
+    format='%(asctime)s - %(name)s - %(levelname)s - [%(funcName)s:%(lineno)d] - %(message)s'
+)
 
-def save_to_file(data, filename, directory="logs"):
-    """将数据保存到文件"""
-    try:
-        # 确保目录存在
-        os.makedirs(directory, exist_ok=True)
-
-        # 构建完整的文件路径
-        filepath = os.path.join(directory, filename)
-
-        # 写入文件
-        with open(filepath, 'w', encoding='utf-8') as f:
-            if isinstance(data, str):
-                f.write(data)
-            else:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-
-        logger.info(f"数据已保存到文件: {filepath}")
-    except Exception as e:
-        logger.error(f"保存数据到文件失败: {e}")
+# save_to_file 函数不再需要，可以移除
+# def save_to_file(data, filename, directory="logs"):
+#     # ...
+#     pass
 
 class SimplifiedFlightHelpers:
-    """简化航班搜索的辅助方法"""
+    """简化航班搜索服务的辅助方法"""
+
+    # _saved_requests_payloads也不再需要
+    # _saved_requests_payloads = set()
 
     @staticmethod
-    def _map_cabin_class(cabin_class: str) -> str:
-        """
-        映射舱位等级到Kiwi.com GraphQL API期望的格式
-
-        Args:
-            cabin_class: 前端传入的舱位等级
-
-        Returns:
-            映射后的舱位等级
-        """
+    def _map_cabin_class(cabin_class: Optional[str]) -> str:
         cabin_mapping = {
             "ECONOMY": "ECONOMY",
             "PREMIUM_ECONOMY": "PREMIUM_ECONOMY",
-            "BUSINESS": "BUSINESS",  # API期望的格式
-            "BUSINESS_CLASS": "BUSINESS",  # 映射到API期望的格式
-            "FIRST": "FIRST",  # API期望的格式
-            "FIRST_CLASS": "FIRST"  # 映射到API期望的格式
+            "BUSINESS": "BUSINESS",
+            "BUSINESS_CLASS": "BUSINESS",
+            "FIRST": "FIRST",
+            "FIRST_CLASS": "FIRST"
         }
-
-        mapped_class = cabin_mapping.get(cabin_class or "ECONOMY", "ECONOMY")
-        logger.info(f"舱位等级映射: {cabin_class} -> {mapped_class}")
+        safe_cabin_class = str(cabin_class).upper() if cabin_class else "ECONOMY"
+        mapped_class = cabin_mapping.get(safe_cabin_class, "ECONOMY")
         return mapped_class
 
     @staticmethod
-    def build_graphql_variables(request, is_one_way: bool) -> Dict[str, Any]:
-        """构建GraphQL查询变量"""
-        # 解析日期
-        dep_date_start = datetime.strptime(request.departure_date_from, "%Y-%m-%d")
-        dep_date_end = datetime.strptime(request.departure_date_to, "%Y-%m-%d") if request.departure_date_to else dep_date_start
+    def build_graphql_variables(request: Any, is_one_way: bool) -> Dict[str, Any]:
+        dep_date_start_str = getattr(request, 'departure_date_from', None)
+        dep_date_to_str = getattr(request, 'departure_date_to', None)
+        origin_iata_str = getattr(request, 'origin_iata', None)
+        destination_iata_str = getattr(request, 'destination_iata', None)
+        adults_count = getattr(request, 'adults', 1)
+        cabin_class_str = getattr(request, 'cabin_class', "ECONOMY")
+        preferred_currency_str = getattr(request, 'preferred_currency', "cny")
+        return_date_from_str = getattr(request, 'return_date_from', None)
+        return_date_to_str = getattr(request, 'return_date_to', None)
 
-        # 构建搜索参数
+        if not all([dep_date_start_str, origin_iata_str, destination_iata_str]):
+            logger.error(f"构建GraphQL变量失败，缺少必要参数: dep_date_start={dep_date_start_str}, origin={origin_iata_str}, dest={destination_iata_str}")
+            raise ValueError("Missing required request parameters for building GraphQL variables.")
+
+        try:
+            dep_date_start = datetime.strptime(dep_date_start_str, "%Y-%m-%d")
+            dep_date_end = datetime.strptime(dep_date_to_str, "%Y-%m-%d") if dep_date_to_str else dep_date_start
+        except ValueError as e:
+            logger.error(f"日期格式错误: {e}. dep_from='{dep_date_start_str}', dep_to='{dep_date_to_str}'")
+            raise
+
         search_params = {
             "itinerary": {
-                "source": {"ids": [f"Station:airport:{request.origin_iata.upper()}"]},
-                "destination": {"ids": [f"Station:airport:{request.destination_iata.upper()}"]},
+                "source": {"ids": [f"Station:airport:{origin_iata_str.upper()}"]},
+                "destination": {"ids": [f"Station:airport:{destination_iata_str.upper()}"]},
                 "outboundDepartureDate": {
                     "start": dep_date_start.strftime("%Y-%m-%dT00:00:00"),
                     "end": dep_date_end.strftime("%Y-%m-%dT23:59:59")
                 }
             },
             "passengers": {
-                "adults": request.adults,
-                "children": 0,
-                "infants": 0,
-                "adultsHoldBags": [0],
-                "adultsHandBags": [0],
-                "childrenHoldBags": [],
-                "childrenHandBags": []
+                "adults": adults_count,
+                "children": getattr(request, 'children', 0),
+                "infants": getattr(request, 'infants', 0),
+                "adultsHoldBags": getattr(request, 'adults_hold_bags', [0]),
+                "adultsHandBags": getattr(request, 'adults_hand_bags', [1]),
+                "childrenHoldBags": [], "childrenHandBags": []
             },
             "cabinClass": {
-                "cabinClass": SimplifiedFlightHelpers._map_cabin_class(request.cabin_class),
-                "applyMixedClasses": False
+                "cabinClass": SimplifiedFlightHelpers._map_cabin_class(cabin_class_str),
+                "applyMixedClasses": True
             }
         }
 
-        # 如果是往返票，添加返程日期
-        if not is_one_way and request.return_date_from:
-            ret_date_start = datetime.strptime(request.return_date_from, "%Y-%m-%d")
-            ret_date_end = datetime.strptime(request.return_date_to, "%Y-%m-%d") if request.return_date_to else ret_date_start
-            search_params["itinerary"]["inboundDepartureDate"] = {
-                "start": ret_date_start.strftime("%Y-%m-%dT00:00:00"),
-                "end": ret_date_end.strftime("%Y-%m-%dT23:59:59")
-            }
+        if not is_one_way and return_date_from_str:
+            try:
+                ret_date_start = datetime.strptime(return_date_from_str, "%Y-%m-%d")
+                ret_date_end = datetime.strptime(return_date_to_str, "%Y-%m-%d") if return_date_to_str else ret_date_start
+                search_params["itinerary"]["inboundDepartureDate"] = {
+                    "start": ret_date_start.strftime("%Y-%m-%dT00:00:00"),
+                    "end": ret_date_end.strftime("%Y-%m-%dT23:59:59")
+                }
+            except ValueError as e:
+                logger.error(f"返程日期格式错误: {e}. ret_from='{return_date_from_str}', ret_to='{return_date_to_str}'")
+                pass
 
-        # 构建过滤参数
+
         filter_params = {
-            "allowChangeInboundDestination": True,
-            "allowChangeInboundSource": True,
-            "allowDifferentStationConnection": True,
-            "enableSelfTransfer": True,
-            "enableThrowAwayTicketing": True,
-            "enableTrueHiddenCity": True,
-            "maxStopsCount": 3,  # 放宽限制，允许最多3次中转
-            "transportTypes": ["FLIGHT"],
-            "contentProviders": ["KIWI"],
-            "flightsApiLimit": 25,
-            "limit": 10
+            "allowChangeInboundDestination": True, "allowChangeInboundSource": True,
+            "allowDifferentStationConnection": True, "enableSelfTransfer": True,
+            "enableThrowAwayTicketing": True, "enableTrueHiddenCity": True,
+            "maxStopsCount": 3, "transportTypes": ["FLIGHT"],
+            "contentProviders": ["KIWI", "FRESH"],
+            "flightsApiLimit": 30, "limit": 25
         }
 
-        # 构建选项参数
         options_params = {
-            "sortBy": "QUALITY",
-            "mergePriceDiffRule": "INCREASED",
-            "currency": request.preferred_currency.lower() if request.preferred_currency else "cny",
-            "apiUrl": None,
-            "locale": "cn",
-            "market": "us",
-            "partner": "skypicker",
-            "partnerMarket": "cn",
-            "affilID": "cj_5250933",
-            "storeSearch": False,
+            "sortBy": "QUALITY", "mergePriceDiffRule": "INCREASED",
+            "currency": preferred_currency_str.lower(),
+            "locale": "cn", "market": "cn", "partner": "skypicker",
+            "partnerMarket": "cn", "affilID": "skypicker", "storeSearch": False,
             "searchStrategy": "REDUCED",
             "abTestInput": {
-                "priceElasticityGuarantee": "DISABLE",
-                "baggageProtectionBundle": "ENABLE",
-                "paretoProtectVanilla": "ENABLE",
-                "kiwiBasicThirdIteration": "C",
-                "offerStrategiesNonT1": "DISABLE",
-                "kayakWithoutBags": "DISABLE",
-                "carriersDeeplinkResultsEnable": True,
-                "carriersDeeplinkOnSEMEnable": True
-            },
-            "serverToken": None,
-            "searchSessionId": None
+                "priceElasticityGuarantee": "DISABLE", "baggageProtectionBundle": "ENABLE",
+                "paretoProtectVanilla": "ENABLE", "kiwiBasicThirdIteration": "C",
+                "offerStrategiesNonT1": "ENABLE", "kayakWithoutBags": "DISABLE",
+                "carriersDeeplinkResultsEnable": True, "carriersDeeplinkOnSEMEnable": True
+            }
         }
-
-        return {
-            "search": search_params,
-            "filter": filter_params,
-            "options": options_params,
-            "conditions": False
-        }
+        return {"search": search_params, "filter": filter_params, "options": options_params}
 
     @staticmethod
     async def execute_graphql_search(
-        variables: Dict[str, Any],
-        headers: Dict[str, str],
-        search_id: str,
-        base_url: str = "https://api.skypicker.com/umbrella/v2/graphql",
-        timeout: float = 30.0
+        variables: Dict[str, Any], headers: Dict[str, str], search_id: str,
+        base_url: str = "https://api.skypicker.com/umbrella/v2/graphql", timeout: float = 45.0
     ) -> List[Dict[str, Any]]:
-        """执行GraphQL搜索"""
-        # 构建GraphQL查询（基于爬虫相关数据.txt中的查询）
         query = """
         query SearchOneWayItinerariesQuery(
-          $search: SearchOnewayInput
-          $filter: ItinerariesFilterInput
-          $options: ItinerariesOptionsInput
-          $conditions: Boolean!
+          $search: SearchOnewayInput, $filter: ItinerariesFilterInput, $options: ItinerariesOptionsInput
         ) {
           onewayItineraries(search: $search, filter: $filter, options: $options) {
             __typename
-            ... on AppError {
-              error: message
-            }
+            ... on AppError { error: message }
             ... on Itineraries {
-              server {
-                requestId
-                environment
-                packageVersion
-                serverToken
-              }
-              metadata {
-                eligibilityInformation {
-                  baggageEligibilityInformation {
-                    topFiveResultsBaggageEligibleForPrompt
-                    numberOfBags
-                  }
-                  guaranteeAndRedirectsEligibilityInformation {
-                    redirect {
-                      anywhere
-                      top10
-                      isKiwiAvailable
-                    }
-                    guarantee {
-                      anywhere
-                      top10
-                    }
-                    combination {
-                      anywhere
-                      top10
-                    }
-                  }
-                  kiwiBasicEligibility {
-                    anywhere
-                    top10
-                  }
-                  topThreeResortingOccurred
-                  carriersDeeplinkEligibility
-                  responseContainsKayakItinerary
-                  paretoABTestEligible
-                }
-                carriers {
-                  code
-                  id
-                  name
-                }
-                ...AirlinesFilter_data
-                ...CountriesFilter_data
-                ...WeekDaysFilter_data
-                ...TravelTip_data
-                ...Sorting_data
-                ...useSortingModes_data
-                ...PriceAlert_data
-                itinerariesCount
-                hasMorePending
-                missingProviders {
-                  code
-                }
-                searchFingerprint
-                statusPerProvider {
-                  provider {
-                    id
-                  }
-                  errorHappened
-                  errorMessage
-                }
-                hasTier1MarketItineraries
-                sharedItinerary { # 如果需要分享功能，否则可以考虑移除以简化
-                  __typename
-                  ...TripInfo
-                  ...ItineraryDebug @include(if: $conditions)
-                  # ... (sharedItinerary 展开的类型和字段) ...
-                  # 这部分如果不需要可以大大简化 query
-                }
-                kayakEligibilityTest {
-                  containsKayakWithNewRules
-                  containsKayakWithCurrentRules
-                  containsKayakAirlinesWithNewRules
-                }
-              }
+              server { requestId }
+              metadata { itinerariesCount hasMorePending }
               itineraries {
                 __typename
-                ...TripInfo # 主要行程信息从此 Fragment 获取
-                ...ItineraryDebug @include(if: $conditions) # 条件性调试信息
                 ... on ItineraryOneWay {
-                  # ItineraryOneWay 特有的一些字段，不在TripInfo里的
-                  legacyId # 例如
-                  # sector { id duration ... } # sector 的部分核心信息可能在 TripInfo, 更细节的直接请求
-                  # 如果 TripInfo 包含了 sector 的全部所需信息，这里就不需要重复
-                  # 但通常 ItineraryOneWay 会直接请求 sector 及其子结构
-
-                  # 以下是示例，实际应基于 TripInfo 和你的需求决定哪些在此处直接请求
+                  ... on Itinerary {
+                    id price { amount } duration pnrCount
+                    bookingOptions { edges { node { token bookingUrl price { amount } } } }
+                    travelHack { isTrueHiddenCity isVirtualInterlining isThrowawayTicket }
+                  }
                   sector {
-                      id
-                      duration
-                      sectorSegments {
-                          guarantee
-                          segment {
-                              id
-                              source {
-                                  localTime
-                                  utcTimeIso
-                                  station {
-                                      # ... (从 PrebookingStation 或直接请求) ...
-                                      # 基于你的响应，这里请求了全部细节
-                                      id legacyId name code type gps { lat lng }
-                                      city { legacyId name id }
-                                      country { code id }
-                                  }
-                              }
-                              destination {
-                                  localTime
-                                  utcTimeIso
-                                  station {
-                                      # ... (同上) ...
-                                      id legacyId name code type gps { lat lng }
-                                      city { legacyId name id }
-                                      country { code id }
-                                  }
-                              }
-                              duration
-                              type
-                              code # flight number
-                              carrier { id name code }
-                              operatingCarrier { id name code }
-                              cabinClass
-                              hiddenDestination { # 重要，为隐藏城市信息
-                                  code name city { name id } country { name id } id
-                              }
-                              throwawayDestination { id }
-                          }
-                          layover {
-                              duration isBaggageRecheck isWalkingDistance transferDuration id
-                          }
+                    duration
+                    sectorSegments {
+                      segment {
+                        source { localTime utcTime station { name code city { name } country { code name } } }
+                        destination { localTime utcTime station { name code city { name } country { code name } } }
+                        hiddenDestination { code name city { name } country { code name } }
+                        code carrier { name code } operatingCarrier { name code } duration
                       }
+                    }
                   }
-                  lastAvailable { seatsLeft }
-                  isRyanair
-                  benefitsData { # 内容省略，按需添加
-                      automaticCheckinAvailable instantChatSupportAvailable disruptionProtectionAvailable
-                      guaranteeAvailable guaranteeFee { roundedAmount } guaranteeFeeEur { amount }
-                      searchReferencePrice { roundedAmount }
-                  }
-                  isAirBaggageBundleEligible
-                  testEligibilityInformation { paretoABTestNewItinerary }
-                }
-                id # Itinerary 顶层的ID
-              }
-            }
-          }
-        }
-
-        # --- 以下是所有必须的 Fragment 定义 ---
-        fragment AirlinesFilter_data on ItinerariesMetadata {
-          carriers { id code name }
-        }
-        fragment CountriesFilter_data on ItinerariesMetadata {
-          stopoverCountries { code name id }
-        }
-        fragment ItineraryDebug on Itinerary {
-          __isItinerary: __typename
-          itineraryDebugData { debug }
-        }
-        fragment PrebookingStation on Station {
-          code type city { name id }
-        }
-        fragment PriceAlert_data on ItinerariesMetadata {
-          priceAlertExists existingPriceAlert { id } searchFingerprint hasMorePending
-          priceAlertsTopResults {
-            best { price { amount } } cheapest { price { amount } } fastest { price { amount } }
-            sourceTakeoffAsc { price { amount } } destinationLandingAsc { price { amount } }
-          }
-        }
-        fragment Sorting_data on ItinerariesMetadata {
-          topResults {
-            best { __typename duration price { amount } id }
-            cheapest { __typename duration price { amount } id }
-            fastest { __typename duration price { amount } id }
-            sourceTakeoffAsc { __typename duration price { amount } id }
-            destinationLandingAsc { __typename duration price { amount } id }
-          }
-        }
-        fragment TravelTip_data on ItinerariesMetadata {
-          travelTips { # 内容非常多，后端按需解析或直接透传
-            __typename
-            ... on TravelTipRadiusMoney { radius params { name value } savingMoney: saving { amount currency { id code name } formattedValue } location { __typename id legacyId name slug } }
-            ... on TravelTipRadiusTime { radius params { name value } saving location { __typename id legacyId name slug } }
-            ... on TravelTipRadiusSome { radius params { name value } location { __typename id legacyId name slug } }
-            ... on TravelTipDateMoney { dates { start end } params { name value } savingMoney: saving { amount currency { id code name } formattedValue } }
-            ... on TravelTipDateTime { dates { start end } params { name value } saving }
-            ... on TravelTipDateSome { dates { start end } params { name value } }
-            ... on TravelTipExtend { destination { __typename id name slug } locations { __typename id name slug } price { amount currency { id code name } formattedValue } }
-          }
-        }
-        fragment TripInfo on Itinerary { # 核心行程信息
-          __isItinerary: __typename
-          id # 通常 id, shareId 在 Itinerary 级别获取，不一定在 TripInfo
-          shareId
-          price { amount priceBeforeDiscount }
-          priceEur { amount }
-          provider { name code hasHighProbabilityOfPriceChange contentProvider { code } id }
-          bagsInfo {
-            includedCheckedBags includedHandBags hasNoBaggageSupported hasNoCheckedBaggage
-            checkedBagTiers { tierPrice { amount } bags { weight { value } } }
-            handBagTiers { tierPrice { amount } bags { weight { value } } }
-            includedPersonalItem
-            personalItemTiers { tierPrice { amount } bags { weight { value } height { value } width { value } length { value } } }
-          }
-          bookingOptions {
-            edges {
-              node {
-                token bookingUrl trackingPixel
-                itineraryProvider { code name subprovider hasHighProbabilityOfPriceChange contentProvider { code } providerCategory id }
-                price { amount } priceEur { amount }
-                priceLocks {
-                  priceLocksCurr { default price { amount roundedFormattedValue } }
-                  priceLocksEur { default price { amount roundedFormattedValue } }
-                }
-                kiwiProduct disruptionTreatment usRulesApply
-              }
-            }
-          }
-          travelHack { isTrueHiddenCity isVirtualInterlining isThrowawayTicket }
-          duration
-          pnrCount
-          # sector 信息可以在这里定义一部分，或者在具体类型如 ItineraryOneWay 中定义
-          # 基于你的响应，TripInfo 里也包含了 sector 的基本结构
-          ... on ItineraryOneWay { # TripInfo 也可以针对不同类型有不同字段
-            sector {
-              id # 确保 TripInfo 包含的 sector 结构与主 query 一致
-              sectorSegments {
-                segment {
-                  source { station { ...PrebookingStation id } localTime }
-                  destination { station { ...PrebookingStation id } }
-                  id
                 }
               }
             }
-          }
-          # ... (其他 ItineraryReturn, ItineraryMulticity 的 TripInfo 展开)
-        }
-        fragment WeekDaysFilter_data on ItinerariesMetadata {
-          inboundDays outboundDays
-        }
-        fragment useSortingModes_data on ItinerariesMetadata { # 与 Sorting_data 类似
-          topResults {
-            best { __typename duration price { amount } id }
-            cheapest { __typename duration price { amount } id }
-            fastest { __typename duration price { amount } id }
-            sourceTakeoffAsc { __typename duration price { amount } id }
-            destinationLandingAsc { __typename duration price { amount } id }
           }
         }
         """
-
-        payload = {
-            "query": query,
-            "variables": variables
-        }
+        payload = {"query": query, "variables": variables}
 
         try:
-            # 初始化保存状态跟踪
-            if not hasattr(SimplifiedFlightHelpers, "_saved_requests"):
-                SimplifiedFlightHelpers._saved_requests = set()
-            if not hasattr(SimplifiedFlightHelpers, "_has_saved_kiwi_response"):
-                SimplifiedFlightHelpers._has_saved_kiwi_response = False
+            # 移除保存请求文件的逻辑
+            # save_to_file(payload, f"kiwi_request_{search_id}.json", "logs/kiwi_requests")
+            # logger.debug(f"[{search_id}] GraphQL请求体: {json.dumps(payload)}") # 如果需要，可以记录请求体
 
-            # 添加调试日志验证修复
-            logger.info(f"[{search_id}] 发送GraphQL请求，关键参数验证:")
-            logger.info(f"[{search_id}] - maxStopsCount: {variables.get('filter', {}).get('maxStopsCount', 'MISSING')}")
-            logger.info(f"[{search_id}] - enableTrueHiddenCity: {variables.get('filter', {}).get('enableTrueHiddenCity', 'MISSING')}")
-            logger.info(f"[{search_id}] - enableSelfTransfer: {variables.get('filter', {}).get('enableSelfTransfer', 'MISSING')}")
-            logger.info(f"[{search_id}] - enableThrowAwayTicketing: {variables.get('filter', {}).get('enableThrowAwayTicketing', 'MISSING')}")
-            logger.info(f"[{search_id}] - cabinClass: {variables.get('search', {}).get('cabinClass', {}).get('cabinClass', 'MISSING')}")
+            dest_info = variables.get('search',{}).get('itinerary',{}).get('destination',{}).get('ids',[''])[0]
+            logger.info(f"[{search_id}] -> 发送GraphQL请求到 {dest_info}")
 
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                # 只保存第一次请求到文件
-                base_search_id = search_id.split('_')[0] + '_' + search_id.split('_')[1]  # 提取基础search_id
-                if base_search_id not in SimplifiedFlightHelpers._saved_requests:
-                    save_to_file(payload, f"kiwi_request_{search_id}.json", "logs/kiwi_requests")
-                    SimplifiedFlightHelpers._saved_requests.add(base_search_id)
-                    logger.info(f"[{search_id}] 已保存请求文件")
-                else:
-                    logger.info(f"[{search_id}] 跳过保存请求文件（已保存过）")
-
+            async with httpx.AsyncClient(timeout=httpx.Timeout(timeout, connect=10.0)) as client:
                 response = await client.post(
-                    f"{base_url}?featureName=SearchOneWayItinerariesQuery",
-                    json=payload,
-                    headers=headers
+                    f"{base_url}?featureName=SearchOneWayItinerariesQuery", json=payload, headers=headers
                 )
+            logger.info(f"[{search_id}] <- HTTP响应状态: {response.status_code} for {dest_info}")
 
-                # 添加响应状态日志
-                logger.info(f"[{search_id}] HTTP响应状态: {response.status_code}")
-
-                response.raise_for_status()
-
-                data = response.json()
-                # logger.info(f"[{search_id}] 原始GraphQL响应JSON: {json.dumps(data, indent=2, ensure_ascii=False)}")
-
-                # 只保存一次原始响应到文件
-                if not SimplifiedFlightHelpers._has_saved_kiwi_response:
-                    save_to_file(data, f"kiwi_response_{search_id}.json", "logs/kiwi_responses")
-                    SimplifiedFlightHelpers._has_saved_kiwi_response = True
-
-                # 检查GraphQL错误
-                if "errors" in data:
-                    logger.error(f"[{search_id}] GraphQL错误: {data['errors']}")
-                    return []
-
-                # 提取航班数据
-                oneway_itineraries = data.get("data", {}).get("onewayItineraries", {})
-                if oneway_itineraries.get("__typename") == "AppError":
-                    logger.error(f"[{search_id}] API错误: {oneway_itineraries.get('error')}")
-                    return []
-
-                itineraries = oneway_itineraries.get("itineraries", [])
-                logger.info(f"[{search_id}] 获取到 {len(itineraries)} 个原始航班结果")
-
-                return itineraries
-
-        except httpx.HTTPStatusError as exc: # 更具体地捕获 HTTP 错误
-            logger.error(f"[{search_id}] GraphQL请求发生HTTP错误: {exc.response.status_code}")
-            try:
-                # 尝试解析并记录JSON响应体，如果它是JSON的话
-                response_body = exc.response.json()
-                logger.error(f"[{search_id}] 错误响应体 (JSON): {json.dumps(response_body, indent=2, ensure_ascii=False)}")
+            try: data = response.json()
             except json.JSONDecodeError:
-                # 如果响应体不是JSON，则记录为文本
-                logger.error(f"[{search_id}] 错误响应体 (Text): {exc.response.text}")
+                logger.error(f"[{search_id}] API响应不是有效的JSON: {response.text[:500]}...") # 记录部分文本
+                data = {"error": "Invalid JSON response", "status_code": response.status_code, "raw_text": response.text}
+            
+            # 移除保存响应文件的逻辑
+            # save_to_file(data, f"kiwi_response_{search_id}.json", "logs/kiwi_responses")
+            if response.status_code >= 400: # 如果是错误状态码，记录响应体用于调试
+                 logger.warning(f"[{search_id}] API错误响应体 ({response.status_code}): {json.dumps(data, ensure_ascii=False)}")
 
-            # 记录详细的请求信息为DEBUG级别，因为它们可能很大或包含敏感数据
-            logger.debug(f"[{search_id}] 失败请求的 Headers: {headers}")
-            logger.debug(f"[{search_id}] 失败请求的 Payload: {json.dumps(payload, indent=2, ensure_ascii=False)}")
+
+            response.raise_for_status() # 确保在处理数据前检查HTTP错误
+
+            if "errors" in data and data["errors"]:
+                logger.error(f"[{search_id}] GraphQL API返回错误: {data['errors']}")
+                return []
+            oneway_data = data.get("data", {}).get("onewayItineraries", {})
+            if oneway_data.get("__typename") == "AppError":
+                logger.error(f"[{search_id}] GraphQL API应用错误: {oneway_data.get('error')}")
+                return []
+            itineraries = oneway_data.get("itineraries", [])
+            logger.info(f"[{search_id}] 获取到 {len(itineraries)} 条原始行程 for {dest_info}")
+            return itineraries
+        except httpx.HTTPStatusError as exc:
+            logger.error(f"[{search_id}] HTTP错误: {exc.response.status_code} for {exc.request.url}", exc_info=False) # exc_info=False 避免重复记录堆栈
+            err_resp_text = exc.response.text
+            logger.error(f"[{search_id}] HTTP错误响应内容: {err_resp_text[:1000]}") # 记录部分错误文本
+            # 移除保存错误响应文件的逻辑
+            # save_to_file(err_body, f"kiwi_error_response_{search_id}.json", "logs/kiwi_responses")
+            return []
+        except Exception as e:
+            logger.error(f"[{search_id}] GraphQL搜索执行中发生未知异常: {e}", exc_info=True)
+            # 移除保存异常文件的逻辑
+            # save_to_file({"error": str(e), "type": type(e).__name__}, f"kiwi_exception_{search_id}.json", "logs/kiwi_responses")
             return []
 
-        # 记录Kiwi API的完整响应
-        SimplifiedFlightHelpers.log_kiwi_response(search_id, data)
-        return []
-
     @staticmethod
-    async def parse_flight_itinerary(raw_itinerary: Dict[str, Any], is_one_way: bool) -> Optional[Dict[str, Any]]:
-        """解析航班行程数据"""
+    def _parse_datetime_flexible(time_str: Optional[str]) -> Optional[datetime]:
+        if not time_str: return None
         try:
-            # 提取基本信息
-            flight_id = raw_itinerary.get("id", "")
-            price_info = raw_itinerary.get("price", {})
-            price_eur = raw_itinerary.get("priceEur", {})
-            travel_hack = raw_itinerary.get("travelHack", {})
-            duration = raw_itinerary.get("duration", 0)
-
-            # 检查是否为隐藏城市航班
-            is_hidden_city = travel_hack.get("isTrueHiddenCity", False)
-
-            # 提取航段信息
-            sector = raw_itinerary.get("sector", {})
-            sector_segments = sector.get("sectorSegments", [])
-
-            segments = []
-            hidden_destinations = []
-
-            for sector_segment in sector_segments:
-                segment_data = sector_segment.get("segment", {})
-                if segment_data:
-                    segment = SimplifiedFlightHelpers.parse_segment(segment_data)
-                    if segment:
-                        segments.append(segment)
-                        # 收集隐藏目的地信息
-                        if segment.get("hidden_destination"):
-                            hidden_destinations.append(segment["hidden_destination"])
-
-            if not segments:
+            dt_obj = datetime.fromisoformat(time_str.replace("Z", "+00:00"))
+            return dt_obj.astimezone(timezone.utc)
+        except ValueError:
+            try:
+                dt_obj = datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S")
+                return dt_obj # 返回 naive，或根据业务决定是否赋予时区
+            except ValueError:
+                logger.warning(f"无法将 '{time_str}' 解析为datetime对象。")
                 return None
 
-            # 提取预订选项
-            booking_options = raw_itinerary.get("bookingOptions", {}).get("edges", [])
-            booking_url = ""
-            if booking_options:
-                booking_url = booking_options[0].get("node", {}).get("bookingUrl", "")
+    @staticmethod
+    async def parse_flight_itinerary(
+        raw_itinerary: Dict[str, Any],
+        requested_currency: str
+    ) -> Optional[Dict[str, Any]]:
+        try:
+            flight_id = raw_itinerary.get("id", f"unknown_id_{datetime.now(timezone.utc).timestamp()}") # 确保 flight_id 始终存在
+            price_info_raw = raw_itinerary.get("price", {})
+            travel_hack_raw = raw_itinerary.get("travelHack", {})
+            total_duration_sec = raw_itinerary.get("duration", 0)
+            pnr_count_val = raw_itinerary.get("pnrCount")
 
-            # 构建简化的航班信息
-            flight_info = {
+            sector_data = raw_itinerary.get("sector", {})
+            sector_segments_list_raw = sector_data.get("sectorSegments", [])
+
+            parsed_segments_list = []
+            calculated_layovers_list = []
+            api_hidden_destinations_on_route = []
+
+            for i, seg_raw in enumerate(sector_segments_list_raw):
+                segment_details_raw = seg_raw.get("segment", {})
+                if segment_details_raw:
+                    parsed_seg = SimplifiedFlightHelpers.parse_segment(segment_details_raw)
+                    if parsed_seg:
+                        parsed_segments_list.append(parsed_seg)
+                        if parsed_seg.get("api_marked_hidden_destination"):
+                            api_hidden_destinations_on_route.append(parsed_seg["api_marked_hidden_destination"])
+
+                        if i > 0 and len(parsed_segments_list) > 1:
+                            prev_seg = parsed_segments_list[i-1]
+                            prev_arrival_utc_str = prev_seg["arrival"].get("utc_time")
+                            curr_dep_utc_str = parsed_seg["departure"].get("utc_time")
+                            
+                            if prev_arrival_utc_str and curr_dep_utc_str: #确保两个时间都存在
+                                prev_arrival_utc = SimplifiedFlightHelpers._parse_datetime_flexible(prev_arrival_utc_str)
+                                curr_dep_utc = SimplifiedFlightHelpers._parse_datetime_flexible(curr_dep_utc_str)
+
+                                if prev_arrival_utc and curr_dep_utc:
+                                    if prev_arrival_utc.tzinfo is None or curr_dep_utc.tzinfo is None:
+                                        logger.warning(f"[{flight_id}] 中转计算时遇到naive datetime，时长可能不准: {prev_arrival_utc_str} / {curr_dep_utc_str}")
+                                    layover_delta_val = curr_dep_utc - prev_arrival_utc
+                                    layover_mins = int(layover_delta_val.total_seconds() / 60)
+                                    calculated_layovers_list.append({
+                                        "duration_minutes": layover_mins,
+                                        "airport_code": prev_seg["ticketed_destination"]["code"],
+                                        "airport_name": prev_seg["ticketed_destination"]["name"],
+                                        "city": prev_seg["ticketed_destination"]["city"],
+                                        "arrival_at_layover_local": prev_seg["arrival"]["local_time"],
+                                        "departure_from_layover_local": parsed_seg["departure"]["local_time"],
+                                    })
+                                else:
+                                    calculated_layovers_list.append({"duration_minutes": -1, "airport_code": prev_seg["ticketed_destination"]["code"], "error": "UTC time parsing failed for layover"})
+                            else:
+                                logger.warning(f"[{flight_id}] 缺少UTC时间无法计算中转时长 for segment after {prev_seg['ticketed_destination']['code']}")
+                                calculated_layovers_list.append({"duration_minutes": -2, "airport_code": prev_seg["ticketed_destination"]["code"], "error": "Missing UTC times for layover"})
+            
+            if not parsed_segments_list:
+                logger.warning(f"[{flight_id}] 没有解析出任何航段。")
+                return None
+
+            booking_options_edges = raw_itinerary.get("bookingOptions", {}).get("edges", [])
+            parsed_booking_opts = []
+            for edge in booking_options_edges:
+                node = edge.get("node", {})
+                b_price = node.get("price", {})
+                parsed_booking_opts.append({
+                    "token": node.get("token"), "url": node.get("bookingUrl"),
+                    "price_amount": float(b_price.get("amount", 0)) if b_price.get("amount") else 0,
+                })
+            if parsed_booking_opts: parsed_booking_opts.sort(key=lambda x: x["price_amount"])
+
+            flight_info_obj = {
                 "id": flight_id,
-                "price": {
-                    "amount": float(price_info.get("amount", 0)) if price_info.get("amount") else 0,
-                    "currency": "CNY",  # 默认货币
-                    "price_eur": float(price_eur.get("amount", 0)) if price_eur.get("amount") else 0
+                "price": {"amount": float(price_info_raw.get("amount",0)) if price_info_raw.get("amount") else 0, "currency": requested_currency.upper()},
+                "ticketed_total_duration_minutes": total_duration_sec // 60 if total_duration_sec else 0,
+                "pnr_count": pnr_count_val,
+                "ticketed_origin_airport": parsed_segments_list[0]["origin"],
+                "ticketed_final_destination_airport": parsed_segments_list[-1]["ticketed_destination"],
+                "ticketed_departure_datetime_local": parsed_segments_list[0]["departure"]["local_time"],
+                "ticketed_arrival_datetime_local": parsed_segments_list[-1]["arrival"]["local_time"],
+                "ticketed_stops_count": len(parsed_segments_list) - 1,
+                "all_segments_on_ticket": parsed_segments_list,
+                "all_layovers_on_ticket": calculated_layovers_list,
+                "api_travel_hack_info": {
+                    "is_true_hidden_city": travel_hack_raw.get("isTrueHiddenCity", False),
+                    "is_virtual_interlining": travel_hack_raw.get("isVirtualInterlining", False),
+                    "is_throwaway_ticket": travel_hack_raw.get("isThrowawayTicket", False),
+                    "api_hidden_destinations_on_route": api_hidden_destinations_on_route,
                 },
-                "duration_minutes": duration // 60 if duration else 0,  # 将秒转换为分钟
-                "segments": segments,
-                "travel_hack": {
-                    "is_true_hidden_city": travel_hack.get("isTrueHiddenCity", False),
-                    "is_virtual_interlining": travel_hack.get("isVirtualInterlining", False),
-                    "is_throwaway_ticket": travel_hack.get("isThrowawayTicket", False)
-                },
-                "hidden_destinations": hidden_destinations,
-                "booking_url": booking_url,
-                "stops_count": len(segments) - 1,
-                "departure_time": segments[0]["departure"]["local_time"] if segments else "",
-                "arrival_time": segments[-1]["arrival"]["local_time"] if segments else "",
-                "origin": segments[0]["origin"] if segments else {},
-                "destination": segments[-1]["destination"] if segments else {}
+                "booking_options": parsed_booking_opts,
+                "default_booking_url": parsed_booking_opts[0]["url"] if parsed_booking_opts else None,
+                "display_flight_type": "Unknown",
+                "user_perceived_destination_airport": parsed_segments_list[-1]["ticketed_destination"],
+                "user_journey_segments_to_display": parsed_segments_list,
+                "user_journey_layovers_to_display": calculated_layovers_list,
+                "user_journey_duration_minutes": total_duration_sec // 60 if total_duration_sec else 0,
+                "user_journey_arrival_datetime_local": parsed_segments_list[-1]["arrival"]["local_time"],
+                "user_alert_notes": [],
+                "_internal_debug_markers": {}
             }
-
-            # 简化隐藏城市航班日志
-            if is_hidden_city and hidden_destinations:
-                logger.debug(f"发现隐藏城市航班: {flight_id} - ¥{price_info.get('amount', 0)}")
-
-            logger.debug(f"[{flight_id}] 航班解析完成")
-
-            # 仅保存直飞航班解析结果
-            if SimplifiedFlightHelpers.is_direct_flight(raw_itinerary):
-                save_to_file(flight_info, f"parsed_flight_{flight_id}.json", "logs/parsed_flights")
-
-            return flight_info
-
+            return flight_info_obj
         except Exception as e:
-            logger.warning(f"解析航班行程失败: {e}")
+            fid = raw_itinerary.get("id", "PARSE_ITI_ERROR_UNKNOWN")
+            logger.error(f"[{fid}] 解析航班行程时发生严重错误: {e}", exc_info=True)
             return None
 
     @staticmethod
-    def parse_segment(segment_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """解析航段数据"""
+    def parse_segment(segment_data_raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         try:
-            source = segment_data.get("source", {})
-            destination = segment_data.get("destination", {})
-            carrier = segment_data.get("carrier", {})
-            hidden_destination = segment_data.get("hiddenDestination", {})
+            source_raw = segment_data_raw.get("source", {})
+            dest_raw = segment_data_raw.get("destination", {})
+            carrier_raw = segment_data_raw.get("carrier", {})
+            op_carrier_raw = segment_data_raw.get("operatingCarrier", {})
+            api_hidden_dest_raw = segment_data_raw.get("hiddenDestination", {})
 
-            segment = {
-                "id": segment_data.get("id", ""),
-                "flight_number": segment_data.get("code", ""),
-                "carrier": {
-                    "code": carrier.get("code", ""),
-                    "name": carrier.get("name", "")
-                },
+            source_station = source_raw.get("station", {})
+            dest_station = dest_raw.get("station", {})
+
+            # Ensure critical time fields have fallbacks to None if not present or empty
+            dep_local_time = source_raw.get("localTime") or None
+            dep_utc_time = source_raw.get("utcTime") or None
+            arr_local_time = dest_raw.get("localTime") or None
+            arr_utc_time = dest_raw.get("utcTime") or None
+
+
+            parsed_seg_obj = {
+                "flight_number": segment_data_raw.get("code", ""),
+                "marketing_carrier": {"code": carrier_raw.get("code"), "name": carrier_raw.get("name")},
+                "operating_carrier": {"code": op_carrier_raw.get("code"), "name": op_carrier_raw.get("name")} if op_carrier_raw and op_carrier_raw.get("code") else None,
                 "origin": {
-                    "code": source.get("station", {}).get("code", ""),
-                    "name": source.get("station", {}).get("name", ""),
-                    "city": source.get("station", {}).get("city", {}).get("name", "")
+                    "code": source_station.get("code"), "name": source_station.get("name"),
+                    "city": source_station.get("city", {}).get("name"),
+                    "country_code": source_station.get("country", {}).get("code"),
+                    "country_name": source_station.get("country", {}).get("name"),
                 },
-                "destination": {
-                    "code": destination.get("station", {}).get("code", ""),
-                    "name": destination.get("station", {}).get("name", ""),
-                    "city": destination.get("station", {}).get("city", {}).get("name", "")
+                "ticketed_destination": {
+                    "code": dest_station.get("code"), "name": dest_station.get("name"),
+                    "city": dest_station.get("city", {}).get("name"),
+                    "country_code": dest_station.get("country", {}).get("code"),
+                    "country_name": dest_station.get("country", {}).get("name"),
                 },
-                "departure": {
-                    "local_time": source.get("localTime", ""),
-                    "utc_time": source.get("utcTimeIso", "")
-                },
-                "arrival": {
-                    "local_time": destination.get("localTime", ""),
-                    "utc_time": destination.get("utcTimeIso", "")
-                },
-                "duration_minutes": segment_data.get("duration", 0) // 60 if segment_data.get("duration") else 0,  # 将秒转换为分钟
-                "cabin_class": segment_data.get("cabinClass", "ECONOMY"),
-                "hidden_destination": {
-                    "code": hidden_destination.get("code", ""),
-                    "name": hidden_destination.get("name", ""),
-                    "city": hidden_destination.get("city", {}).get("name", ""),
-                    "country": hidden_destination.get("country", {}).get("name", "")
-                } if hidden_destination else None
+                "departure": {"local_time": dep_local_time, "utc_time": dep_utc_time},
+                "arrival": {"local_time": arr_local_time, "utc_time": arr_utc_time},
+                "duration_minutes": segment_data_raw.get("duration", 0) // 60,
+                "api_marked_hidden_destination": {
+                    "code": api_hidden_dest_raw.get("code"), "name": api_hidden_dest_raw.get("name"),
+                    "city": api_hidden_dest_raw.get("city", {}).get("name"),
+                    "country_code": api_hidden_dest_raw.get("country", {}).get("code"),
+                    "country_name": api_hidden_dest_raw.get("country", {}).get("name"),
+                } if api_hidden_dest_raw and api_hidden_dest_raw.get("code") else None,
             }
-
-            # 简化隐藏目的地日志
-            if hidden_destination:
-                logger.debug(f"发现隐藏目的地航段: {segment['flight_number']} -> {hidden_destination.get('code', '')}")
-
-            return segment
-
+            return parsed_seg_obj
         except Exception as e:
-            logger.warning(f"解析航段失败: {e}")
+            flight_num = segment_data_raw.get('code', 'UNKNOWN_FLIGHT')
+            logger.error(f"解析航段数据失败 {flight_num}: {e}", exc_info=True)
             return None
 
     @staticmethod
-    def is_direct_flight(raw_itinerary: Dict[str, Any]) -> bool:
-        """检查是否为直飞航班（排除隐藏城市航班）"""
-        try:
-            sector = raw_itinerary.get("sector", {})
-            sector_segments = sector.get("sectorSegments", [])
-            travel_hack = raw_itinerary.get("travelHack", {})
-
-            # 基础检查：必须是单航段
-            is_single_segment = len(sector_segments) == 1
-
-            # 关键检查：不能是隐藏城市航班
-            is_hidden_city = travel_hack.get("isTrueHiddenCity", False)
-
-            # 添加诊断日志
-            flight_id = raw_itinerary.get("id", "UNKNOWN")
-            logger.info(f"🔍 【直飞验证】航班 {flight_id}:")
-            logger.info(f"   - 单航段: {is_single_segment}")
-            logger.info(f"   - 隐藏城市: {is_hidden_city}")
-            logger.info(f"   - 最终判定: {is_single_segment and not is_hidden_city}")
-
-            # 如果是隐藏城市航班但被误判为直飞，记录警告
-            if is_single_segment and is_hidden_city:
-                logger.warning(f"⚠️ 【分类错误】航班 {flight_id} 是隐藏城市航班但航段数为1，已正确排除")
-
-            return is_single_segment and not is_hidden_city
-        except Exception as e:
-            logger.error(f"检查直飞航班失败: {e}")
-            return False
+    def get_throwaway_destinations(origin_iata_code: str, target_dest_iata_code: str) -> List[str]:
+        throwaway_map = { # 这个列表可以从配置文件或数据库加载
+            "PEK": ["NRT", "ICN", "SIN", "BKK", "KUL", "MNL", "TPE", "CEB", "MFM", "HKG"],
+            "PVG": ["NRT", "ICN", "SIN", "BKK", "KUL", "MNL", "TPE", "CEB", "MFM", "HKG"],
+            "CAN": ["SIN", "BKK", "KUL", "MNL", "TPE", "ICN", "CEB", "MFM", "HKG"],
+            "LHR": ["AMS", "CDG", "FRA", "DUB", "IST", "BCN", "MAD"], # 欧洲示例
+            "JFK": ["LAX", "MIA", "YYZ", "MEX", "BOG"], # 美洲示例
+            "DEFAULT": ["NRT", "ICN", "SIN", "BKK", "KUL", "MNL", "TPE", "HKG", "CEB", "MFM", "AMS", "IST"]
+        }
+        potential_dests = throwaway_map.get(origin_iata_code.upper(), throwaway_map["DEFAULT"])
+        return list(set(d for d in potential_dests if d.upper() != target_dest_iata_code.upper()))
 
     @staticmethod
-    def is_hidden_city_flight(raw_itinerary: Dict[str, Any], target_destination: str) -> bool:
-        """检查是否为隐藏城市航班（经过目标城市但不是最终目的地）"""
-        try:
-            # 检查travelHack字段
-            travel_hack = raw_itinerary.get("travelHack", {})
-            if not travel_hack.get("isTrueHiddenCity", False):
-                return False
-
-            # 检查航段是否经过目标城市
-            sector = raw_itinerary.get("sector", {})
-            sector_segments = sector.get("sectorSegments", [])
-
-            for sector_segment in sector_segments:
-                segment = sector_segment.get("segment", {})
-                destination = segment.get("destination", {}).get("station", {})
-                if destination.get("code", "").upper() == target_destination.upper():
-                    return True
-
-            return False
-
-        except Exception as e:
-            logger.warning(f"检查隐藏城市航班失败: {e}")
-            return False
+    def deduplicate_flights(flights_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        if not flights_list: return []
+        seen_flight_ids = set()
+        unique_flights_list = []
+        for flight_item in flights_list:
+            flight_id_val = flight_item.get("id")
+            if flight_id_val and flight_id_val not in seen_flight_ids:
+                seen_flight_ids.add(flight_id_val)
+                unique_flights_list.append(flight_item)
+            elif not flight_id_val:
+                 unique_flights_list.append(flight_item)
+                 logger.warning(f"Deduplicating flight with no ID: {flight_item.get('ticketed_origin_airport',{}).get('code')}")
+        unique_flights_list.sort(key=lambda x: (
+            x.get("price", {}).get("amount", float('inf')),
+            x.get("user_journey_duration_minutes", x.get("ticketed_total_duration_minutes", float('inf')))
+        ))
+        return unique_flights_list
 
     @staticmethod
-    def get_throwaway_destinations(origin: str, destination: str) -> List[str]:
-        """获取潜在的甩尾目的地"""
-        # 基于常见的航线模式定义甩尾目的地
-        throwaway_map = {
-            # 从中国出发的常见甩尾目的地
-            "PEK": ["NRT", "ICN", "SIN", "BKK", "KUL", "MNL", "TPE"],
-            "PVG": ["NRT", "ICN", "SIN", "BKK", "KUL", "MNL", "TPE"],
-            "CAN": ["SIN", "BKK", "KUL", "MNL", "TPE", "ICN"],
-            "SZX": ["SIN", "BKK", "KUL", "MNL", "TPE"],
-
-            # 从其他亚洲城市出发
-            "ICN": ["NRT", "SIN", "BKK", "TPE", "MNL"],
-            "NRT": ["ICN", "SIN", "BKK", "TPE"],
-            "SIN": ["BKK", "KUL", "MNL", "TPE", "ICN"],
-
-            # 默认甩尾目的地
-            "DEFAULT": ["NRT", "ICN", "SIN", "BKK", "KUL", "MNL", "TPE", "HKG"]
+    def get_disclaimer_flags(direct_flights_found: bool, hidden_city_flights_found: bool) -> Dict[str, bool]:
+        return {
+            "show_direct_flight_disclaimer_key": direct_flights_found, # 前端用这个key找文本
+            "show_hidden_city_disclaimer_key": hidden_city_flights_found, # 前端用这个key找文本
         }
 
-        # 获取起始城市的甩尾目的地列表
-        destinations = throwaway_map.get(origin.upper(), throwaway_map["DEFAULT"])
+# --- 上层协调逻辑 (示例) ---
+async def find_and_classify_flights(
+    search_request: MockFlightSearchRequest,
+    api_headers: Dict[str, str]
+) -> Dict[str, Any]:
+    request_id_prefix = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}_{search_request.origin_iata}_{search_request.destination_iata}"
+    target_destination = search_request.destination_iata.upper()
+    origin_airport = search_request.origin_iata.upper()
+    requested_currency = search_request.preferred_currency or "cny"
 
-        # 过滤掉目标目的地本身
-        filtered_destinations = [dest for dest in destinations if dest != destination.upper()]
+    all_parsed_itineraries = []
 
-        return filtered_destinations
+    # --- 步骤 1: 搜索主要目的地 ---
+    main_search_id = f"{request_id_prefix}_S1_main"
+    logger.info(f"[{main_search_id}] 1. 主要目的地搜索: {origin_airport} -> {target_destination}")
+    main_vars = SimplifiedFlightHelpers.build_graphql_variables(search_request, search_request.is_one_way)
+    main_vars["filter"]["limit"] = 40
+    main_vars["filter"]["flightsApiLimit"] = 50
 
-    @staticmethod
-    def deduplicate_flights(flights: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """去重航班并按价格排序"""
-        if not flights:
-            return []
+    raw_main_itineraries = await SimplifiedFlightHelpers.execute_graphql_search(main_vars, api_headers, main_search_id)
+    for raw_iti in raw_main_itineraries:
+        parsed = await SimplifiedFlightHelpers.parse_flight_itinerary(raw_iti, requested_currency)
+        if parsed:
+            parsed["_internal_debug_markers"]["search_type"] = "main_destination"
+            all_parsed_itineraries.append(parsed)
+    logger.info(f"[{main_search_id}] 主要目的地搜索完成，解析到 {len([p for p in all_parsed_itineraries if p['_internal_debug_markers']['search_type'] == 'main_destination'])} 条有效行程。")
 
-        # 使用航班ID去重
-        seen_ids = set()
-        unique_flights = []
+    # --- 步骤 2: 搜索周边/甩尾目的地 ---
+    throwaway_search_id_prefix = f"{request_id_prefix}_S2_throwaway"
+    potential_throwaway_dests = SimplifiedFlightHelpers.get_throwaway_destinations(origin_airport, target_destination)
+    logger.info(f"[{throwaway_search_id_prefix}] 2. 周边/甩尾目的地搜索，潜在甩尾点: {potential_throwaway_dests}")
 
-        for flight in flights:
-            flight_id = flight.get("id", "")
-            if flight_id and flight_id not in seen_ids:
-                seen_ids.add(flight_id)
-                unique_flights.append(flight)
+    throwaway_search_tasks = []
+    for i, td_code in enumerate(potential_throwaway_dests):
+        # 使用 Pydantic 的 .copy() 方法或 dataclasses.replace()
+        # 对于 MockFlightSearchRequest，我们用 .copy()
+        throwaway_req_obj = search_request.copy(update={"destination_iata": td_code})
+        
+        throwaway_vars = SimplifiedFlightHelpers.build_graphql_variables(throwaway_req_obj, throwaway_req_obj.is_one_way)
+        throwaway_vars["filter"]["limit"] = 15 # 甩尾搜索的结果可以少一些
+        throwaway_vars["filter"]["maxStopsCount"] = max(throwaway_vars["filter"].get("maxStopsCount", 2), 2) # 确保至少允许2次中转
 
-        # 按价格排序
-        unique_flights.sort(key=lambda x: x.get("price", {}).get("amount", float('inf')))
+        task_id = f"{throwaway_search_id_prefix}_{i}_{td_code}"
+        throwaway_search_tasks.append(
+            SimplifiedFlightHelpers.execute_graphql_search(throwaway_vars, api_headers, task_id)
+        )
 
-        return unique_flights
+    if throwaway_search_tasks:
+        logger.info(f"[{throwaway_search_id_prefix}] 并行执行 {len(throwaway_search_tasks)} 个甩尾搜索任务...")
+        results_from_throwaway = await asyncio.gather(*throwaway_search_tasks, return_exceptions=True)
+        
+        for i, res_or_exc in enumerate(results_from_throwaway):
+            td_code = potential_throwaway_dests[i]
+            if isinstance(res_or_exc, Exception):
+                logger.error(f"[{throwaway_search_id_prefix}] 甩尾搜索到 {td_code} 失败: {res_or_exc}")
+                continue
+            if res_or_exc:
+                for raw_iti in res_or_exc:
+                    parsed = await SimplifiedFlightHelpers.parse_flight_itinerary(raw_iti, requested_currency)
+                    if parsed:
+                        parsed["_internal_debug_markers"]["search_type"] = "throwaway_search"
+                        parsed["_internal_debug_markers"]["throwaway_ticketed_dest"] = td_code
+                        all_parsed_itineraries.append(parsed)
+    logger.info(f"[{throwaway_search_id_prefix}] 周边/甩尾目的地搜索完成。")
 
-    @staticmethod
-    def get_disclaimers(include_direct: bool, include_hidden_city: bool) -> List[str]:
-        """获取免责声明"""
-        disclaimers = []
+    # --- 步骤 3: 结果整合与分类 ---
+    classification_id = f"{request_id_prefix}_S3_classify"
+    logger.info(f"[{classification_id}] 3. 开始整合与分类，总共解析到 {len(all_parsed_itineraries)} 条不重复前的行程...")
+    unique_itineraries = SimplifiedFlightHelpers.deduplicate_flights(all_parsed_itineraries)
+    logger.info(f"[{classification_id}] 去重后得到 {len(unique_itineraries)} 条独立行程。")
 
-        if include_direct:
-            disclaimers.append("直飞航班价格和时间可能会发生变化，请以实际预订为准。")
+    direct_flights_final = []
+    hidden_city_flights_final = []
+    # other_flights_final = [] # 可选：用于存储普通中转等
 
-        if include_hidden_city:
-            disclaimers.extend([
-                "隐藏城市航班存在一定风险，包括但不限于：",
-                "1. 航空公司可能取消后续航段",
-                "2. 不能托运行李到最终目的地",
-                "3. 违反航空公司条款可能导致账户被封",
-                "4. 仅适用于单程票，不适用于往返票",
-                "请谨慎使用隐藏城市航班，风险自负。"
-            ])
+    for flight in unique_itineraries:
+        is_api_hc = flight["api_travel_hack_info"]["is_true_hidden_city"]
+        num_ticket_segments = len(flight["all_segments_on_ticket"])
 
-        return disclaimers
+        # 类别A: 真实直达
+        if num_ticket_segments == 1 and not is_api_hc and \
+           flight["ticketed_final_destination_airport"]["code"] == target_destination:
+            flight["display_flight_type"] = "直达"
+            # user_journey... 字段已在解析时默认设置为票面全程，对于直达是正确的
+            direct_flights_final.append(flight)
+            continue
+
+        # 类别B: API标记的隐藏城市 (用户在目标城市下机)
+        if is_api_hc:
+            can_drop_off_at_target = False
+            user_segments = []
+            user_layovers = [] # Layovers before reaching target_destination
+            arrival_at_target_local = None
+            
+            for seg_idx, segment in enumerate(flight["all_segments_on_ticket"]):
+                user_segments.append(segment)
+                if seg_idx > 0: # Add layover before this segment
+                     # Ensure index is valid for all_layovers_on_ticket
+                    if flight["all_layovers_on_ticket"] and (seg_idx -1) < len(flight["all_layovers_on_ticket"]):
+                        user_layovers.append(flight["all_layovers_on_ticket"][seg_idx-1])
+                
+                if segment["ticketed_destination"]["code"] == target_destination:
+                    # This segment lands at the target destination
+                    arrival_at_target_local = segment["arrival"]["local_time"]
+                    
+                    # Check if this is a valid drop-off point (i.e., not the ticketed final destination *unless* it's a single-segment HC)
+                    if flight["ticketed_final_destination_airport"]["code"] != target_destination or num_ticket_segments == 1:
+                        can_drop_off_at_target = True
+                        flight["display_flight_type"] = "隐藏城市"
+                        flight["user_perceived_destination_airport"] = segment["ticketed_destination"]
+                        flight["user_journey_segments_to_display"] = list(user_segments) # Take a copy
+                        flight["user_journey_layovers_to_display"] = list(user_layovers)
+                        flight["user_journey_arrival_datetime_local"] = arrival_at_target_local
+                        
+                        dep_dt_utc_str = flight["all_segments_on_ticket"][0]["departure"].get("utc_time")
+                        arr_dt_utc_str = segment["arrival"].get("utc_time")
+                        dep_dt = SimplifiedFlightHelpers._parse_datetime_flexible(dep_dt_utc_str)
+                        arr_dt = SimplifiedFlightHelpers._parse_datetime_flexible(arr_dt_utc_str)
+                        if dep_dt and arr_dt:
+                            flight["user_journey_duration_minutes"] = int((arr_dt - dep_dt).total_seconds() / 60)
+                        else:
+                            flight["user_journey_duration_minutes"] = -1 # Indicate error or unknown
+
+                        flight["user_alert_notes"].append(f"需在“{target_destination}”提前下机。")
+                        if flight["ticketed_final_destination_airport"]["code"] != target_destination:
+                            flight["user_alert_notes"].append(f"票面终点“{flight['ticketed_final_destination_airport']['code']}”。")
+                        hidden_city_flights_final.append(flight)
+                        break # Found drop-off point
+            if can_drop_off_at_target:
+                continue
+        
+        # 类别C: 构造的隐藏城市 (通过甩尾搜索，在中转点是目标城市)
+        if flight["_internal_debug_markers"].get("search_type") == "throwaway_search":
+            can_construct_hc = False
+            user_segments = []
+            user_layovers = []
+            arrival_at_target_local = None
+
+            for seg_idx, segment in enumerate(flight["all_segments_on_ticket"]):
+                user_segments.append(segment)
+                if seg_idx > 0:
+                    if flight["all_layovers_on_ticket"] and (seg_idx -1) < len(flight["all_layovers_on_ticket"]):
+                        layover = flight["all_layovers_on_ticket"][seg_idx-1]
+                        user_layovers.append(layover)
+                        # Check if the layover (i.e., previous segment's destination) is the target
+                        if layover["airport_code"] == target_destination:
+                            arrival_at_target_local = flight["all_segments_on_ticket"][seg_idx-1]["arrival"]["local_time"]
+                            can_construct_hc = True
+                            flight["display_flight_type"] = "隐藏城市 (中转即达)"
+                            flight["user_perceived_destination_airport"] = flight["all_segments_on_ticket"][seg_idx-1]["ticketed_destination"]
+                            flight["user_journey_segments_to_display"] = list(user_segments[:-1]) # Segments up to target
+                            flight["user_journey_layovers_to_display"] = list(user_layovers[:-1]) # Layovers before target
+                            flight["user_journey_arrival_datetime_local"] = arrival_at_target_local
+                           
+                            dep_dt_utc_str = flight["all_segments_on_ticket"][0]["departure"].get("utc_time")
+                            arr_dt_utc_str = flight["all_segments_on_ticket"][seg_idx-1]["arrival"].get("utc_time")
+                            dep_dt = SimplifiedFlightHelpers._parse_datetime_flexible(dep_dt_utc_str)
+                            arr_dt = SimplifiedFlightHelpers._parse_datetime_flexible(arr_dt_utc_str)
+                            if dep_dt and arr_dt:
+                                flight["user_journey_duration_minutes"] = int((arr_dt - dep_dt).total_seconds() / 60)
+                            else:
+                                flight["user_journey_duration_minutes"] = -1
+                            
+                            flight["user_alert_notes"].append(f"需在中转站“{target_destination}”提前结束行程。")
+                            flight["user_alert_notes"].append(f"票面终点“{flight['ticketed_final_destination_airport']['code']}”。")
+                            hidden_city_flights_final.append(flight)
+                            break # Found HC opportunity
+                if can_construct_hc: break # Break outer loop as well
+            if can_construct_hc:
+                continue
+        
+        # 可选：处理普通中转到目标城市的航班
+        # if num_ticket_segments > 1 and not is_api_hc and \
+        #    flight["_internal_debug_markers"].get("search_type") != "throwaway_search" and \
+        #    flight["ticketed_final_destination_airport"]["code"] == target_destination:
+        #     flight["display_flight_type"] = "普通中转"
+        #     # user_journey... fields are already set to full ticketed journey
+        #     other_flights_final.append(flight)
+
+    direct_flights_final = SimplifiedFlightHelpers.deduplicate_flights(direct_flights_final)
+    hidden_city_flights_final = SimplifiedFlightHelpers.deduplicate_flights(hidden_city_flights_final)
+    # other_flights_final = SimplifiedFlightHelpers.deduplicate_flights(other_flights_final)
+
+    logger.info(f"[{classification_id}] 分类完成。直达: {len(direct_flights_final)}, 隐藏城市: {len(hidden_city_flights_final)}")
+
+    return {
+        "direct_flights": direct_flights_final,
+        "hidden_city_flights": hidden_city_flights_final,
+        # "other_transfer_flights": other_flights_final,
+        "disclaimer_flags": SimplifiedFlightHelpers.get_disclaimer_flags(
+            direct_flights_found=bool(direct_flights_final),
+            hidden_city_flights_found=bool(hidden_city_flights_final)
+        )
+    }
+
+async def main_example_usage():
+    # 确保在测试时替换为真实的API Key
+    test_headers = {
+        "Content-Type": "application/json",
+        "apikey": os.environ.get("KIWI_API_KEY", "YOUR_KIWI_API_KEY_HERE") # 从环境变量或直接设置
+    }
+    if "YOUR_KIWI_API_KEY_HERE" in test_headers["apikey"]:
+        logger.warning("请设置有效的KIWI_API_KEY环境变量或直接在代码中替换。")
+        # return
+
+    # 示例1: LHR -> PKX (北京大兴)
+    request1 = MockFlightSearchRequest(
+        origin_iata="LHR",
+        destination_iata="PKX",
+        departure_date_from="2024-09-15", # 使用未来的日期
+        departure_date_to="2024-09-15",
+        adults=1,
+        cabin_class="ECONOMY",
+        preferred_currency="cny"
+    )
+    logger.info(f"开始测试 LHR->PKX...")
+    results1 = await find_and_classify_flights(request1, test_headers)
+    # 为了避免控制台输出过长，我们只打印数量
+    logger.info(f"LHR->PKX 结果: 直达 {len(results1['direct_flights'])}, 隐藏城市 {len(results1['hidden_city_flights'])}")
+    with open("results_lhr_pkx.json", "w", encoding="utf-8") as f:
+         json.dump(results1, f, indent=2, ensure_ascii=False)
+    logger.info("LHR->PKX 结果已保存到 results_lhr_pkx.json")
+
+    await asyncio.sleep(2) # API 可能有速率限制
+
+    # 示例2: 中国国内，例如 PEK -> CAN (广州)
+    # request2 = MockFlightSearchRequest(
+    #     origin_iata="PEK",
+    #     destination_iata="CAN",
+    #     departure_date_from="2024-08-20",
+    #     departure_date_to="2024-08-20",
+    #     adults=1
+    # )
+    # logger.info(f"开始测试 PEK->CAN...")
+    # results2 = await find_and_classify_flights(request2, test_headers)
+    # logger.info(f"PEK->CAN 结果: 直达 {len(results2['direct_flights'])}, 隐藏城市 {len(results2['hidden_city_flights'])}")
+    # with open("results_pek_can.json", "w", encoding="utf-8") as f:
+    #      json.dump(results2, f, indent=2, ensure_ascii=False)
+    # logger.info("PEK->CAN 结果已保存到 results_pek_can.json")
+
+
+if __name__ == "__main__":
+    # 运行示例
+    asyncio.run(main_example_usage())

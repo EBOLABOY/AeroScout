@@ -1,22 +1,18 @@
-# 环境变量和敏感信息
+# 环境变量和敏感信息（生产环境）
 .env
 .env.local
 .env.production
 .env.development.local
-*.env
 
-# 数据库文件
-*.db
-*.sqlite
-*.sqlite3
+# 数据库文件（运行时生成）
 aeroscout.db
 test_aeroscout.db
 
 # 缓存和临时文件
-trip_cookies.json
-kiwi_token.json
 cache/
 *.log
+logs/*.json
+logs/*.log
 
 # Python
 __pycache__/
@@ -261,15 +257,16 @@ public
 ehthumbs.db
 Thumbs.db
 
-# Backup files
+# 运行时生成的文件
+*.pid
+*.lock
 backups/
-*.backup
-*.bak
 
-# Windows batch files (keep only essential ones)
-start_*.bat
-*.ps1
-
-# Alembic
-alembic/versions/*.py
-!alembic/versions/__init__.py
+# 注意：私人仓库 - 以下重要文件将被包含：
+# ✅ trip_cookies.json, kiwi_token.json (配置示例)
+# ✅ 所有 .bat, .sh 脚本文件
+# ✅ 所有 docker-compose.*.yml 文件
+# ✅ 所有 nginx.*.conf 配置文件
+# ✅ 所有 .md 文档文件
+# ✅ requirements.txt, package.json 等依赖文件
+# ✅ Dockerfile 和部署脚本

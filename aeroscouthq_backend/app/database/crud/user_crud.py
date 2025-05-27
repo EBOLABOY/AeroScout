@@ -44,12 +44,13 @@ async def create_user(user_data: dict) -> int:
     在数据库中创建新用户。
 
     Args:
-        user_data: 包含用户信息的字典，至少需要 'email' 和 'hashed_password'。
+        user_data: 包含用户信息的字典，至少需要 'username', 'email' 和 'hashed_password'。
 
     Returns:
         新创建用户的 ID。
     """
     query = insert(users_table).values(
+        username=user_data["username"],
         email=user_data["email"],
         hashed_password=user_data["hashed_password"],
         created_at=datetime.now(timezone.utc), # Ensure timezone aware datetime

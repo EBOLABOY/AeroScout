@@ -1,5 +1,5 @@
-import React from 'react';
-import { cn } from '@/lib/utils';
+﻿import React from 'react';
+import { cn } from '../../lib/utils';
 
 interface SkeletonProps {
   className?: string;
@@ -10,7 +10,7 @@ interface SkeletonProps {
 }
 
 /**
- * 通用骨架屏组件
+ * 閫氱敤楠ㄦ灦灞忕粍浠?
  */
 const Skeleton: React.FC<SkeletonProps> = ({
   className,
@@ -45,7 +45,7 @@ const Skeleton: React.FC<SkeletonProps> = ({
 };
 
 /**
- * 文本骨架屏组件
+ * 鏂囨湰楠ㄦ灦灞忕粍浠?
  */
 export const TextSkeleton: React.FC<SkeletonProps & { lines?: number }> = ({
   className,
@@ -72,7 +72,7 @@ export const TextSkeleton: React.FC<SkeletonProps & { lines?: number }> = ({
 };
 
 /**
- * 搜索记录骨架屏组件
+ * 鎼滅储璁板綍楠ㄦ灦灞忕粍浠?
  */
 export const SearchRecordSkeleton: React.FC = () => {
   return (
@@ -101,7 +101,7 @@ export const SearchRecordSkeleton: React.FC = () => {
 };
 
 /**
- * API使用统计骨架屏组件
+ * API浣跨敤缁熻楠ㄦ灦灞忕粍浠?
  */
 export const ApiUsageSkeleton: React.FC = () => {
   return (
@@ -134,22 +134,22 @@ export const ApiUsageSkeleton: React.FC = () => {
 };
 
 /**
- * API使用图表骨架屏组件
+ * API浣跨敤鍥捐〃楠ㄦ灦灞忕粍浠?
  */
 export const ChartSkeleton: React.FC = () => {
-  // 使用固定的预定义高度值数组替代随机生成
+  // 浣跨敤鍥哄畾鐨勯瀹氫箟楂樺害鍊兼暟缁勬浛浠ｉ殢鏈虹敓鎴?
   const barHeights = [25, 45, 65, 35, 75, 55, 40];
-  
-  // 客户端渲染时的随机高度
+
+  // 瀹㈡埛绔覆鏌撴椂鐨勯殢鏈洪珮搴?
   const [heights, setHeights] = React.useState<number[]>(barHeights);
-  
-  // 使用useEffect确保只在客户端渲染后更新随机高度
+
+  // 浣跨敤useEffect纭繚鍙湪瀹㈡埛绔覆鏌撳悗鏇存柊闅忔満楂樺害
   React.useEffect(() => {
-    // 客户端渲染后生成新的随机高度
+    // 瀹㈡埛绔覆鏌撳悗鐢熸垚鏂扮殑闅忔満楂樺害
     const randomHeights = Array.from({ length: 7 }).map(() => 10 + Math.random() * 90);
     setHeights(randomHeights);
   }, []);
-  
+
   return (
     <div className="h-[250px] w-full">
       <div className="flex h-full w-full flex-col">
@@ -176,7 +176,7 @@ export const ChartSkeleton: React.FC = () => {
 };
 
 /**
- * 邀请码骨架屏组件
+ * 閭€璇风爜楠ㄦ灦灞忕粍浠?
  */
 export const InvitationCodeSkeleton: React.FC = () => {
   return (

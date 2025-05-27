@@ -11,6 +11,9 @@ import uuid
 from datetime import datetime
 import logging
 
+from app.core.dependencies import get_current_active_user, RateLimiter
+from app.apis.v1.schemas import UserResponse
+
 from app.apis.v1.schemas.flights_v2 import (
     # Request schemas
     FlightSearchBaseRequest,
@@ -104,6 +107,8 @@ def create_search_context(request: FlightSearchBaseRequest, search_id: str, phas
 @router.post("/search/phase-one", response_model=PhaseOneSearchResponse)
 async def search_phase_one(
     request: PhaseOneSearchRequest,
+    current_user: UserResponse = Depends(get_current_active_user),
+    _ = Depends(RateLimiter(limit_type="flight")),
     session_manager = Depends(get_search_session_manager)
 ) -> PhaseOneSearchResponse:
     """
@@ -240,7 +245,11 @@ async def search_phase_one(
         raise HTTPException(status_code=500, detail=f"第一阶段搜索失败: {str(e)}")
 
 @router.post("/search/phase-two", response_model=PhaseTwoSearchResponse)
-async def search_phase_two(request: PhaseTwoSearchRequest) -> PhaseTwoSearchResponse:
+async def search_phase_two(
+    request: PhaseTwoSearchRequest,
+    current_user: UserResponse = Depends(get_current_active_user),
+    _ = Depends(RateLimiter(limit_type="flight"))
+) -> PhaseTwoSearchResponse:
     """
     第二阶段搜索：枢纽城市探测和复杂路由
     """
@@ -354,7 +363,11 @@ async def search_phase_two(request: PhaseTwoSearchRequest) -> PhaseTwoSearchResp
         raise HTTPException(status_code=500, detail=f"第二阶段搜索失败: {str(e)}")
 
 @router.post("/search-sync", response_model=UnifiedSearchResponse)
-async def unified_search_sync(request: UnifiedSearchRequest) -> UnifiedSearchResponse:
+async def unified_search_sync(
+    request: UnifiedSearchRequest,
+    current_user: UserResponse = Depends(get_current_active_user),
+    _ = Depends(RateLimiter(limit_type="flight"))
+) -> UnifiedSearchResponse:
     """
     统一同步搜索：执行完整的两阶段搜索
     兼容V1 API格式，同时提供V2增强功能
@@ -510,6 +523,7 @@ async def unified_search_sync(request: UnifiedSearchRequest) -> UnifiedSearchRes
 @router.get("/search/status/{search_id}", response_model=SearchStatusResponse)
 async def get_search_status(
     search_id: str,
+    current_user: UserResponse = Depends(get_current_active_user),
     session_manager = Depends(get_search_session_manager)
 ) -> SearchStatusResponse:
     """
@@ -551,6 +565,7 @@ async def get_search_status(
 @router.delete("/search/{search_id}")
 async def cleanup_search_session(
     search_id: str,
+    current_user: UserResponse = Depends(get_current_active_user),
     session_manager = Depends(get_search_session_manager)
 ):
     """
@@ -586,6 +601,7 @@ async def health_check(session_manager = Depends(get_search_session_manager)):
 @router.get("/sessions")
 async def list_search_sessions(
     pattern: str = "*",
+    current_user: UserResponse = Depends(get_current_active_user),
     session_manager = Depends(get_search_session_manager)
 ):
     """

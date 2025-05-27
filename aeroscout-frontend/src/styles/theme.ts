@@ -101,9 +101,9 @@ export const darkColors = {
 // 排版系统
 export const typography = {
   fontFamily: {
-    base: 'SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-    display: 'SF Pro Display, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-    mono: 'SF Mono, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace'
+    base: 'SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "微软雅黑", "SimSun", "宋体", Roboto, Helvetica, Arial, sans-serif',
+    display: 'SF Pro Display, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "微软雅黑", "SimSun", "宋体", Roboto, Helvetica, Arial, sans-serif',
+    mono: 'SF Mono, SFMono-Regular, Consolas, "Liberation Mono", Menlo, "Microsoft YaHei", monospace'
   },
   fontWeight: {
     regular: 400,

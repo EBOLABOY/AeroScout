@@ -4,18 +4,19 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import axios from 'axios';
-import apiClient from '@/lib/apiService';
-import { useAuthStore } from '@/store/authStore';
+import apiClient from '../../../lib/apiService';
+import { useAuthStore } from '../../../store/authStore';
 import Link from 'next/link';
-import Button from '@/components/common/Button';
-import Input from '@/components/common/Input';
+import Button from '../../../components/common/Button';
+import Input from '../../../components/common/Input';
+import AuthGuard from '../../../components/AuthGuard';
 
 interface LoginFormData {
   email: string;
   password: string;
 }
 
-const LoginPage = () => {
+const LoginContent = () => {
   const router = useRouter();
   const { setAuthenticated, setAccessToken, setCurrentUser } = useAuthStore();
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>();
@@ -58,14 +59,43 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8 animate-fadeIn">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <h2 className="text-3xl font-semibold text-[#1D1D1F] tracking-tight">登录账户</h2>
-          <p className="mt-2 text-[#86868B] text-[15px]">欢迎回来，请登录您的账户</p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#007AFF] via-[#5856D6] to-[#AF52DE]">
+      {/* 背景装饰 */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute top-3/4 right-1/4 w-80 h-80 bg-purple-300/5 rounded-full blur-3xl animate-float-delayed"></div>
+        <div className="absolute bottom-1/4 left-1/3 w-64 h-64 bg-blue-300/5 rounded-full blur-3xl animate-float"></div>
+      </div>
 
-        <div className="mt-8 bg-white rounded-apple shadow-apple p-8 border border-[#E8E8ED] animate-scaleIn">
+      {/* 顶部导航 */}
+      <nav className="relative z-10 bg-white/8 backdrop-blur-3xl border-b border-white/15">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+          <Link href="/search" className="flex items-center space-x-2 text-white hover:text-white/80 transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="font-medium">返回首页</span>
+          </Link>
+          <h1 className="text-xl font-bold text-white">用户登录</h1>
+          <div className="w-20"></div>
+        </div>
+      </nav>
+
+      {/* 主内容 */}
+      <div className="relative z-10 flex items-center justify-center px-6 py-16 min-h-[calc(100vh-80px)]">
+        <div className="w-full max-w-md">
+          {/* 品牌标题 */}
+          <div className="text-center mb-12 animate-fadeIn">
+            <h1 className="text-[42px] font-bold tracking-tight leading-none text-white mb-4">
+              <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-500 bg-clip-text text-transparent">
+                AeroScout
+              </span>
+            </h1>
+            <p className="text-[18px] text-white/70 font-light">欢迎回来</p>
+          </div>
+
+          {/* 登录表单 */}
+          <div className="bg-white/95 backdrop-blur-3xl rounded-3xl shadow-2xl border border-white/20 p-8 animate-scaleIn">
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
             {errorMessage && (
               <div className="bg-[#FFF1F0] border border-[#FF3B30] text-[#FF3B30] px-4 py-3 rounded-lg animate-fadeIn" role="alert">
@@ -135,17 +165,41 @@ const LoginPage = () => {
             </div>
 
             <div className="text-center pt-4">
-              <p className="text-[14px] text-[#86868B]">
+              <p className="text-[14px] text-gray-600">
                 没有账户？{' '}
-                <Link href="/auth/register" className="text-[#0071E3] hover:text-[#0077ED] transition-colors font-medium">
+                <Link href="/auth/register" className="text-blue-600 hover:text-blue-700 transition-colors font-medium">
                   注册
                 </Link>
               </p>
             </div>
           </form>
+          </div>
+
+          {/* 底部链接 */}
+          <div className="text-center mt-8 animate-fadeIn animation-delay-300">
+            <div className="flex justify-center space-x-6 text-[14px]">
+              <Link href="/about" className="text-white/60 hover:text-white/80 transition-colors">
+                关于我们
+              </Link>
+              <Link href="/privacy" className="text-white/60 hover:text-white/80 transition-colors">
+                隐私政策
+              </Link>
+              <Link href="/terms" className="text-white/60 hover:text-white/80 transition-colors">
+                服务条款
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+  );
+};
+
+const LoginPage = () => {
+  return (
+    <AuthGuard requireAuth={false}>
+      <LoginContent />
+    </AuthGuard>
   );
 };
 

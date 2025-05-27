@@ -11,8 +11,8 @@ services:
       - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      # SSL证书目录（如果需要HTTPS）
-      # - ./ssl:/etc/nginx/ssl
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot
     depends_on:
       - frontend
       - backend
@@ -32,7 +32,7 @@ services:
 
   # 后端API服务
   backend:
-    build: 
+    build:
       context: ./aeroscouthq_backend
       dockerfile: Dockerfile
     container_name: aeroscout-backend
@@ -59,7 +59,7 @@ services:
 
   # Celery工作进程
   celery:
-    build: 
+    build:
       context: ./aeroscouthq_backend
       dockerfile: Dockerfile
     container_name: aeroscout-celery
@@ -86,7 +86,7 @@ services:
 
   # 前端服务
   frontend:
-    build: 
+    build:
       context: ./aeroscout-frontend
       dockerfile: Dockerfile
     container_name: aeroscout-frontend
@@ -95,7 +95,7 @@ services:
       - "3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://47.79.39.147/api
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://AeroScout.izlx.de/api}
       - HOSTNAME=0.0.0.0
     depends_on:
       - backend

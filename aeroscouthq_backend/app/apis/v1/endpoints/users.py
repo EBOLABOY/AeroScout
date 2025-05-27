@@ -73,32 +73,49 @@ async def get_usage_stats(current_user: UserResponse = Depends(get_current_activ
     返回今日调用次数、每日上限和计数重置日期等信息。
     """
     try:
-        # 获取用户的API调用统计
-        poi_daily_limit = getattr(settings, "POI_DAILY_LIMIT", 50)
-        flight_daily_limit = getattr(settings, "FLIGHT_DAILY_LIMIT", 20)
+        # 获取用户的API调用统计 - 使用正确的默认值
+        poi_daily_limit = getattr(settings, "POI_DAILY_LIMIT", 10)  # 与配置文件一致
+        flight_daily_limit = getattr(settings, "FLIGHT_DAILY_LIMIT", 5)  # 与配置文件一致
 
-        # 计算明天的日期作为重置日期 - 修复日期计算bug
+        # 管理员用户显示无限制
+        if current_user.is_admin:
+            poi_daily_limit = 999999  # 显示为无限制
+            flight_daily_limit = 999999  # 显示为无限制
+
+        # 计算明天的日期作为重置日期
         from datetime import timedelta
         import logging
         logger = logging.getLogger(__name__)
 
         today = datetime.now(timezone.utc).date()
-        tomorrow = today + timedelta(days=1)  # 正确的日期加法
+        tomorrow = today + timedelta(days=1)
         reset_datetime = datetime.combine(tomorrow, datetime.min.time(), tzinfo=timezone.utc)
 
-        # 简化调试日志
-        logger.debug(f"API使用统计 - 用户调用次数: {current_user.api_call_count_today}")
+        # 调试日志
+        logger.debug(f"API使用统计 - 用户总调用次数: {current_user.api_call_count_today}, 是否管理员: {current_user.is_admin}")
 
-        # 计算使用百分比和是否接近限制
-        total_calls_today = current_user.api_call_count_today * 2  # 简化：假设POI和Flight各占一半
-        total_daily_limit = poi_daily_limit + flight_daily_limit
-        usage_percentage = (total_calls_today / total_daily_limit * 100) if total_daily_limit > 0 else 0.0
-        is_near_limit = usage_percentage >= 80.0  # 80%以上视为接近限制
+        # 目前系统使用统一计数器，暂时将总调用次数分配给POI和Flight
+        # TODO: 未来可以实现分别计数的功能
+        total_calls_today = current_user.api_call_count_today
+
+        # 假设POI和Flight调用各占一半（简化处理）
+        poi_calls_estimated = total_calls_today // 2
+        flight_calls_estimated = total_calls_today - poi_calls_estimated
+
+        # 计算使用百分比（基于总限制）
+        if current_user.is_admin:
+            # 管理员显示0%使用率
+            usage_percentage = 0.0
+            is_near_limit = False
+        else:
+            total_daily_limit = poi_daily_limit + flight_daily_limit
+            usage_percentage = (total_calls_today / total_daily_limit * 100) if total_daily_limit > 0 else 0.0
+            is_near_limit = usage_percentage >= 80.0  # 80%以上视为接近限制
 
         # 创建API使用统计对象
         usage_stats = ApiUsageStat(
-            poi_calls_today=current_user.api_call_count_today,  # 简化示例，实际可能需要区分不同类型的API调用
-            flight_calls_today=current_user.api_call_count_today,  # 简化示例，实际可能需要区分不同类型的API调用
+            poi_calls_today=poi_calls_estimated,
+            flight_calls_today=flight_calls_estimated,
             poi_daily_limit=poi_daily_limit,
             flight_daily_limit=flight_daily_limit,
             reset_date=reset_datetime,

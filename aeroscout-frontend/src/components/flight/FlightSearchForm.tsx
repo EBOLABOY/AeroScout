@@ -1,575 +1,312 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useForm, Controller, SubmitHandler } from 'react-hook-form';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import AirportSelector from '@/components/airport/AirportSelector';
-import { searchSimplifiedFlights, SimplifiedFlightSearchRequest } from '@/lib/apiService';
-import { useFlightResultsStore, FlightData } from '@/store/flightResultsStore';
-// 导入自定义组件
-import Button from '@/components/common/Button';
-import Input from '@/components/common/Input';
-import FlightSearchLoader from '@/components/common/FlightSearchLoader';
-import { adaptSimplifiedFlightResponse } from '@/lib/simplifiedApiAdapter';
+import AirportSelector from '../airport/AirportSelector';
+import Button from '../common/Button';
+import { Airport } from '../../types/airport';
+import { FlightSearchRequest } from '../../types/api';
+import { useAlertStore } from '../../store/alertStore';
 
-// 定义简化的表单数据类型
-interface SimplifiedFlightSearchFormData {
-  originIata: string;
-  destinationIata: string;
-  departureDate: string;
-  returnDate?: string;
-  tripType: 'one-way' | 'round-trip';
-  adults: number;
-  children: number;
-  infants: number;
-  cabinClass: 'ECONOMY' | 'PREMIUM_ECONOMY' | 'BUSINESS' | 'FIRST';
-  directFlightsOnly: boolean;
-  enableHubProbe: boolean;
+interface FlightSearchFormProps {
+  onSearch?: (searchData: FlightSearchRequest) => void;
 }
 
-// 定义机场信息接口（兼容AirportSelector）
-interface AirportInfo {
-  code: string;
-  name: string;
-  city: string;
-  country: string;
-  type: string; // 必需字段以兼容apiService的AirportInfo
-}
-
-const FlightSearchForm: React.FC = () => {
-  // 获取当前日期和一年后的日期，用于日期选择器的限制
-  const today = new Date().toISOString().split('T')[0];
-  const oneYearLater = new Date();
-  oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
-  const maxDate = oneYearLater.toISOString().split('T')[0];
-
-  // 使用react-hook-form管理表单状态
-  const {
-    control,
-    handleSubmit,
-    setValue,
-    watch,
-    clearErrors,
-    formState: { errors },
-  } = useForm<SimplifiedFlightSearchFormData>({
-    defaultValues: {
-      originIata: '',
-      destinationIata: '',
-      departureDate: today,
-      returnDate: '',
-      tripType: 'one-way',
-      adults: 1,
-      children: 0,
-      infants: 0,
-      cabinClass: 'ECONOMY',
-      directFlightsOnly: false,
-      enableHubProbe: true,
-    },
-  });
-
-  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
-  const tripType = watch('tripType');
-  const departureDate = watch('departureDate');
-  const originIata = watch('originIata');
-  const destinationIata = watch('destinationIata');
-
-  // 从 Zustand store 获取状态和 actions
-  const {
-    searchStatus,
-    setSearchSuccess,
-    setSearchError,
-    setSearchLoading,
-  } = useFlightResultsStore();
-
+const FlightSearchForm: React.FC<FlightSearchFormProps> = ({ onSearch }) => {
   const router = useRouter();
-  const [formSubmitError, setFormSubmitError] = useState<string | null>(null);
+  const { showAlert } = useAlertStore();
 
-  // 使用useState来存储完整的机场信息对象
-  const [selectedOriginAirportInfo, setSelectedOriginAirportInfo] = useState<AirportInfo | null>(null);
-  const [selectedDestinationAirportInfo, setSelectedDestinationAirportInfo] = useState<AirportInfo | null>(null);
-
-  // 监听表单渲染，记录状态变化，用于调试
-  useEffect(() => {
-    console.log("FlightSearchForm RENDER: originIata =", originIata, "selectedOriginAirportInfo =", selectedOriginAirportInfo);
-    console.log("FlightSearchForm RENDER: destinationIata =", destinationIata, "selectedDestinationAirportInfo =", selectedDestinationAirportInfo);
-  });
-
-  // 出发地机场选择处理函数
-  const handleOriginAirportSelected = useCallback((airport: AirportInfo | null) => {
-    console.log('[FlightSearchForm] handleOriginAirportSelected - airport:', airport);
-    console.log("出发地机场选择:", airport);
-
-    setSelectedOriginAirportInfo(airport);
-
-    if (airport && airport.code) {
-      console.log("设置出发地IATA:", airport.code);
-      setValue('originIata', airport.code, {
-        shouldValidate: true,
-        shouldDirty: true,
-        shouldTouch: true
-      });
-      clearErrors('originIata');
-    } else {
-      console.log("清空出发地IATA");
-      setValue('originIata', '', { shouldValidate: true });
-    }
-  }, [setValue, clearErrors]);
-
-  // 目的地机场选择处理函数
-  const handleDestinationAirportSelected = useCallback((airport: AirportInfo | null) => {
-    console.log('[FlightSearchForm] handleDestinationAirportSelected - airport:', airport);
-    console.log("目的地机场选择:", airport);
-
-    setSelectedDestinationAirportInfo(airport);
-
-    if (airport && airport.code) {
-      console.log("设置目的地IATA:", airport.code);
-      setValue('destinationIata', airport.code, {
-        shouldValidate: true,
-        shouldDirty: true,
-        shouldTouch: true
-      });
-      clearErrors('destinationIata');
-    } else {
-      console.log("清空目的地IATA");
-      setValue('destinationIata', '', { shouldValidate: true });
-    }
-  }, [setValue, clearErrors]);
-
-  const onSubmit: SubmitHandler<SimplifiedFlightSearchFormData> = async (data) => {
-    console.log('🚀 [DEBUG] 开始搜索 - 立即设置loading状态');
-    setFormSubmitError(null);
-
-    // 立即设置loading状态，确保加载动画立即显示
-    setSearchLoading();
-
-    // 映射 cabinClass 到 GraphQL API 期望的值
-    let apiCabinClass = data.cabinClass;
-    switch (data.cabinClass) {
-      case 'BUSINESS':
-        apiCabinClass = 'BUSINESS';  // API期望BUSINESS而不是BUSINESS_CLASS
-        break;
-      case 'FIRST':
-        apiCabinClass = 'FIRST';  // API期望FIRST而不是FIRST_CLASS
-        break;
-      // ECONOMY 和 PREMIUM_ECONOMY 通常保持不变，但需根据API确认
-      // case 'PREMIUM_ECONOMY':
-      //   apiCabinClass = 'PREMIUM_ECONOMY'; // 假设API使用此值
-      //   break;
-      default:
-        apiCabinClass = data.cabinClass; // 保持原样或默认为 ECONOMY
-    }
-    console.log(`[FlightSearchForm] Mapped cabinClass from ${data.cabinClass} to ${apiCabinClass}`);
-
-    const payload: SimplifiedFlightSearchRequest = {
-      origin_iata: data.originIata,
-      destination_iata: data.destinationIata,
-      departure_date_from: data.departureDate,
-      departure_date_to: data.departureDate,
-      return_date_from: data.returnDate || undefined,
-      return_date_to: data.returnDate || undefined,
-      adults: data.adults,
-      cabin_class: apiCabinClass, // 使用映射后的值
-      preferred_currency: 'CNY',
-      max_results_per_type: 10,
-      max_pages_per_search: 1,
-      direct_flights_only_for_primary: data.directFlightsOnly,
-    };
-
-    try {
-      console.log('🚀 提交简化航班搜索请求:', payload);
-      console.log('🔄 [DEBUG] 当前搜索状态:', searchStatus);
-
-      // 调用简化航班搜索API
-      const response = await searchSimplifiedFlights(
-        payload,
-        true, // 包含直飞航班
-        data.enableHubProbe // 根据用户设置决定是否包含隐藏城市航班
-      );
-
-      console.log('✅ 简化API响应:', response);
-      console.log('🔍 [DEBUG] 隐藏城市航班原始数据:', response.hidden_city_flights);
-
-      if (response) {
-        // 使用适配器转换响应数据
-        const flightData: FlightData = adaptSimplifiedFlightResponse(response);
-
-        console.log('=== 🎯 简化航班搜索成功 ===');
-        console.log('📋 原始响应:', response);
-        console.log('✈️ 处理后数据:', flightData);
-        console.log('🔢 直飞航班数量:', flightData.directFlights?.length || 0);
-        console.log('🔢 隐藏城市航班数量:', flightData.comboDeals?.length || 0);
-        console.log('📝 免责声明数量:', flightData.disclaimers?.length || 0);
-        console.log('⏱️ 搜索耗时:', response.search_time_ms, 'ms');
-
-        // 详细检查隐藏城市航班数据
-        if (response.hidden_city_flights && response.hidden_city_flights.length > 0) {
-          console.log('🎯 [DEBUG] 第一个隐藏城市航班详情:');
-          console.log('- ID:', response.hidden_city_flights[0].id);
-          console.log('- 价格:', response.hidden_city_flights[0].price);
-          console.log('- 隐藏目的地:', response.hidden_city_flights[0].hidden_destination);
-          console.log('- 是否隐藏城市:', response.hidden_city_flights[0].is_hidden_city);
-        }
-
-        // 检查适配后的数据
-        if (flightData.comboDeals && flightData.comboDeals.length > 0) {
-          console.log('🎯 [DEBUG] 适配后第一个组合航班详情:');
-          console.log('- ID:', flightData.comboDeals[0].id);
-          console.log('- 价格:', flightData.comboDeals[0].price);
-          console.log('- 隐藏目的地:', flightData.comboDeals[0].hiddenDestination);
-          console.log('- 是否隐藏城市:', flightData.comboDeals[0].isHiddenCity);
-        }
-
-        setSearchSuccess(flightData, true);
-
-        console.log('🧭 导航到结果页面:', flightData);
-        router.push('/search/results');
-      } else {
-        setFormSubmitError('未能获取搜索结果，响应格式不正确。');
-        setSearchError('未能获取搜索结果，响应格式不正确。');
-      }
-    } catch (error) {
-      console.error('❌ 简化航班搜索错误:', error);
-      console.log('🔄 [DEBUG] 错误后的搜索状态:', searchStatus);
-      setFormSubmitError(`搜索失败: ${error instanceof Error ? error.message : '未知错误'}`);
-      setSearchError(`搜索失败: ${error instanceof Error ? error.message : '未知错误'}`);
-    }
+  // 获取今天的日期
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
   };
 
-  // 记录组件挂载和卸载
-  useEffect(() => {
-    console.log('🚀 FlightSearchForm组件挂载 (简化搜索版本)');
+  // 表单状态
+  const [origin, setOrigin] = useState<Airport | null>(null);
+  const [destination, setDestination] = useState<Airport | null>(null);
+  const [departureDate, setDepartureDate] = useState(getTodayDate());
+  const [cabinClass, setCabinClass] = useState('ECONOMY');
+  const [isLoading, setIsLoading] = useState(false);
 
-    return () => {
-      console.log('👋 FlightSearchForm组件卸载');
-    };
+  // 自动聚焦到第一个输入框
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const firstInput = document.querySelector('input[placeholder="选择出发机场"]') as HTMLInputElement;
+      if (firstInput) {
+        firstInput.focus();
+      }
+    }, 500);
+    return () => clearTimeout(timer);
   }, []);
 
+
+
+  // 验证表单
+  const validateForm = (): boolean => {
+    if (!origin) {
+      showAlert('请选择出发地', 'error');
+      return false;
+    }
+    if (!destination) {
+      showAlert('请选择目的地', 'error');
+      return false;
+    }
+    if (origin.code === destination.code) {
+      showAlert('出发地和目的地不能相同', 'error');
+      return false;
+    }
+    if (!departureDate) {
+      showAlert('请选择出发日期', 'error');
+      return false;
+    }
+    return true;
+  };
+
+  // 处理表单提交
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('🚀 搜索表单提交');
+
+    if (!validateForm()) {
+      console.log('❌ 表单验证失败');
+      return;
+    }
+
+    console.log('✅ 表单验证通过，开始搜索');
+    setIsLoading(true);
+
+    try {
+      // 构建搜索请求数据
+      const searchData: FlightSearchRequest = {
+        origin_iata: origin!.code,
+        destination_iata: destination!.code,
+        departure_date_from: departureDate,
+        departure_date_to: departureDate, // 使用相同日期作为范围
+        adults: 1, // 默认1位成人
+        children: 0,
+        infants: 0,
+        cabin_class: cabinClass,
+        direct_flights_only_for_primary: false,
+        enable_hub_probe: true,
+        is_one_way: true, // 固定为单程
+      };
+
+      // 如果有回调函数，调用它
+      if (onSearch) {
+        await onSearch(searchData);
+      } else {
+        // 否则导航到结果页面
+        const searchParams = new URLSearchParams({
+          origin: origin!.code,
+          destination: destination!.code,
+          departureDate,
+          adults: '1',
+          children: '0',
+          infants: '0',
+          cabinClass,
+          directFlightsOnly: 'false',
+          enableHubProbe: 'true',
+          isOneWay: 'true',
+        });
+
+        router.push(`/search/results?${searchParams.toString()}`);
+      }
+    } catch (error) {
+      console.error('搜索失败:', error);
+      showAlert('搜索失败，请稍后重试', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [origin, destination, departureDate, cabinClass, onSearch, router, showAlert]);
+
   return (
-    <div className="w-full bg-white rounded-lg shadow-lg overflow-visible animate-fadeIn">
-      {/* 顶部简化搜索提示 */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <span className="text-blue-600 text-sm font-medium">
-              🚀 AeroScout 简化搜索
-            </span>
-            <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">
-              直飞 + 隐藏城市
-            </span>
+    <div className="w-full max-w-6xl mx-auto">
+      <form onSubmit={handleSubmit} className="relative">
+        {/* 样式选项1: 极简主义风格 */}
+        {/* <div className="bg-white/90 backdrop-blur-2xl rounded-2xl shadow-lg border border-white/30 p-6 animate-fadeIn">
+          <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+            <div className="flex-1">
+              <label className="block text-sm text-gray-700 mb-2">出发地</label>
+              <AirportSelector value={origin} onChange={setOrigin} placeholder="出发机场" mode="dep" className="w-full" />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm text-gray-700 mb-2">目的地</label>
+              <AirportSelector value={destination} onChange={setDestination} placeholder="目的地机场" mode="dep" className="w-full" />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm text-gray-700 mb-2">出发日期</label>
+              <input type="date" value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} min={getTodayDate()} className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm text-gray-700 mb-2">舱位</label>
+              <select value={cabinClass} onChange={(e) => setCabinClass(e.target.value)} className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="ECONOMY">经济舱</option>
+                <option value="BUSINESS">商务舱</option>
+              </select>
+            </div>
+            <button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-medium transition-colors duration-200 disabled:bg-gray-400">
+              {isLoading ? '搜索中...' : '搜索'}
+            </button>
           </div>
-          <div className="text-xs text-blue-600">
-            快速搜索 • 智能推荐 • 风险提示
-          </div>
-        </div>
-      </div>
+        </div> */}
 
-      {/* 单程/往返选择 */}
-      <div className="bg-gradient-to-r from-orange-50 to-white px-6 py-3">
-        <div className="flex space-x-4">
-          <Controller
-            name="tripType"
-            control={control}
-            render={({ field }) => (
-              <div className="flex space-x-8">
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    className="sr-only"
-                    checked={field.value === 'one-way'}
-                    onChange={() => field.onChange('one-way')}
-                  />
-                  <div className={`text-sm font-medium pb-2 border-b-2 transition-all ${field.value === 'one-way' ? 'text-orange-500 border-orange-500' : 'text-gray-400 border-transparent'}`}>
-                    单程
-                  </div>
-                </label>
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    className="sr-only"
-                    checked={field.value === 'round-trip'}
-                    onChange={() => field.onChange('round-trip')}
-                  />
-                  <div className={`text-sm font-medium pb-2 border-b-2 transition-all ${field.value === 'round-trip' ? 'text-orange-500 border-orange-500' : 'text-gray-400 border-transparent'}`}>
-                    往返
-                  </div>
-                </label>
-              </div>
-            )}
-          />
-        </div>
-      </div>
-
-      {/* 主搜索表单 */}
-      <form onSubmit={handleSubmit(onSubmit)} className="p-6 overflow-visible">
-        {formSubmitError && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            <strong>错误：</strong> {formSubmitError}
-          </div>
-        )}
-
-        <div className="flex flex-col lg:flex-row lg:items-end lg:space-x-4 overflow-visible">
-          {/* 出发地/目的地 */}
-          <div className="flex-1 mb-4 lg:mb-0 overflow-visible">
-            <Controller
-              name="originIata"
-              control={control}
-              rules={{ required: '出发地不能为空' }}
-              render={({ fieldState }) => (
-                <AirportSelector
-                  label="出发地"
-                  placeholder="搜索出发机场或城市..."
-                  value={selectedOriginAirportInfo}
-                  onAirportSelected={handleOriginAirportSelected}
-                  error={fieldState.error?.message}
-                />
-              )}
-            />
-          </div>
-
-          <div className="hidden lg:block flex-none">
-            <div className="w-8 h-8 flex items-center justify-center mb-1.5">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-5 h-5 text-gray-400">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+        {/* 样式选项2: 分段式设计 */}
+        {/* <div className="space-y-6">
+          <div className="bg-white/95 backdrop-blur-3xl rounded-2xl shadow-xl border border-white/20 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               </svg>
+              选择目的地
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <AirportSelector value={origin} onChange={setOrigin} placeholder="出发地" mode="dep" className="w-full" />
+              <AirportSelector value={destination} onChange={setDestination} placeholder="目的地" mode="dep" className="w-full" />
             </div>
           </div>
-
-          <div className="flex-1 mb-4 lg:mb-0 overflow-visible">
-            <Controller
-              name="destinationIata"
-              control={control}
-              rules={{ required: '目的地不能为空' }}
-              render={({ fieldState }) => (
-                <AirportSelector
-                  label="目的地"
-                  placeholder="搜索目的地机场或城市..."
-                  value={selectedDestinationAirportInfo}
-                  onAirportSelected={handleDestinationAirportSelected}
-                  error={fieldState.error?.message}
-                />
-              )}
-            />
+          <div className="bg-white/95 backdrop-blur-3xl rounded-2xl shadow-xl border border-white/20 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              选择日期和舱位
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input type="date" value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} min={getTodayDate()} className="px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
+              <select value={cabinClass} onChange={(e) => setCabinClass(e.target.value)} className="px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="ECONOMY">经济舱</option>
+                <option value="BUSINESS">商务舱</option>
+              </select>
+            </div>
           </div>
-
-          {/* 日期选择 */}
-          <div className="flex-1 mb-4 lg:mb-0">
-            <Controller
-              name="departureDate"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  type="date"
-                  id="departureDate"
-                  label="出发日期"
-                  variant="filled"
-                  min={today}
-                  max={maxDate}
-                  {...field}
-                  error={errors.departureDate?.message}
-                  className="rounded-lg"
-                  onChange={(e) => {
-                    field.onChange(e);
-                    const returnDate = watch('returnDate');
-                    if (tripType === 'round-trip' && returnDate && new Date(e.target.value) > new Date(returnDate)) {
-                      setValue('returnDate', e.target.value, { shouldValidate: true });
-                    }
-                  }}
-                />
-              )}
-            />
+          <div className="text-center">
+            <button type="submit" disabled={isLoading} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-12 py-4 rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+              {isLoading ? '搜索中...' : '开始搜索'}
+            </button>
           </div>
+        </div> */}
 
-          {tripType === 'round-trip' && (
-            <div className="flex-1 mb-4 lg:mb-0 animate-fadeIn">
-              <Controller
-                name="returnDate"
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    type="date"
-                    id="returnDate"
-                    label="返程日期"
-                    variant="filled"
-                    min={departureDate || today}
-                    max={maxDate}
-                    {...field}
-                    error={errors.returnDate?.message}
-                    className="rounded-lg"
-                  />
-                )}
+        {/* 极简主义风格 - 单行布局 */}
+        <div className="bg-white/90 backdrop-blur-2xl rounded-2xl shadow-lg border border-white/30 p-6 animate-fadeIn">
+          {/* 单行表单布局 */}
+          <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+            {/* 出发地 */}
+            <div className="flex-1">
+              <label htmlFor="origin-input" className="block text-sm text-gray-700 mb-2 font-medium">出发地</label>
+              <AirportSelector
+                value={origin}
+                onChange={setOrigin}
+                placeholder="选择出发机场"
+                mode="dep"
+                className="w-full"
               />
             </div>
-          )}
 
-          {/* 乘客数量选择 */}
-          <div className="flex-1 mb-4 lg:mb-0">
-            <Controller
-              name="adults"
-              control={control}
-              render={({ field }) => (
-                <div>
-                  <label htmlFor="adults" className="block text-sm font-medium text-gray-700 mb-1.5">
-                    乘客
-                  </label>
-                  <div className="flex items-center px-4 py-2.5 bg-gray-50 rounded-lg">
-                    <button
-                      type="button"
-                      onClick={() => field.value > 1 && field.onChange(field.value - 1)}
-                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-200 rounded-full transition-colors"
-                      disabled={field.value <= 1}
-                      aria-label="减少乘客数量"
-                    >
-                      <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                      </svg>
-                    </button>
-                    <span className="flex-1 text-center text-sm text-gray-900 font-medium mx-2">
-                      {field.value}位成人
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => field.value < 9 && field.onChange(field.value + 1)}
-                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-200 rounded-full transition-colors"
-                      disabled={field.value >= 9}
-                      aria-label="增加乘客数量"
-                    >
-                      <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                    </button>
-                    <input
-                      type="hidden"
-                      id="adults"
-                      {...field}
-                    />
-                  </div>
-                  {errors.adults && <p className="text-red-500 text-xs mt-1">{errors.adults.message}</p>}
-                </div>
-              )}
-            />
-          </div>
-
-          {/* 搜索按钮 */}
-          <div className="flex-none">
-            <Button
-              type="submit"
-              disabled={searchStatus === 'loading'}
-              isLoading={searchStatus === 'loading'}
-              size="lg"
-              className="w-full lg:w-auto mt-6 lg:mt-0 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg px-8 shadow-lg"
-            >
-              {searchStatus === 'loading' ? '🔍 搜索中...' : '🚀 开始搜索'}
-            </Button>
-          </div>
-        </div>
-
-        {/* 高级选项 */}
-        <div className="mt-6 border-t border-gray-200 pt-4">
-          <div className="flex justify-between items-center">
-            <div className="flex space-x-6">
-              <Controller
-                name="cabinClass"
-                control={control}
-                render={({ field }) => (
-                  <div className="flex items-center space-x-2">
-                    <label htmlFor="cabinClass" className="text-sm font-medium text-gray-700">
-                      舱位等级
-                    </label>
-                    <select
-                      id="cabinClass"
-                      {...field}
-                      className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="ECONOMY">经济舱</option>
-                      <option value="PREMIUM_ECONOMY">超级经济舱</option>
-                      <option value="BUSINESS">商务舱</option>
-                      <option value="FIRST">头等舱</option>
-                    </select>
-                  </div>
-                )}
-              />
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <Controller
-                  name="directFlightsOnly"
-                  control={control}
-                  render={({ field: { onChange, value } }) => (
-                    <input
-                      type="checkbox"
-                      checked={value}
-                      onChange={onChange}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                  )}
-                />
-                <span className="text-sm text-gray-700">仅直飞</span>
-              </label>
-            </div>
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
-              className="text-blue-600 hover:text-blue-700"
-            >
-              {showAdvancedOptions ? '收起选项' : '更多选项'}
-            </Button>
-          </div>
-
-          {showAdvancedOptions && (
-            <div className="mt-4 p-4 bg-blue-50 rounded-lg animate-fadeIn">
-              <label className="flex items-center space-x-3 cursor-pointer">
-                <Controller
-                  name="enableHubProbe"
-                  control={control}
-                  render={({ field: { onChange, value } }) => (
-                    <input
-                      type="checkbox"
-                      checked={value}
-                      onChange={onChange}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                  )}
-                />
-                <div>
-                  <span className="text-sm font-medium text-gray-900">启用隐藏城市航班搜索</span>
-                  <p className="text-xs text-gray-600 mt-1">
-                    搜索可能更便宜的隐藏城市航班（甩尾票），但存在一定风险
-                  </p>
-                </div>
-              </label>
-            </div>
-          )}
-        </div>
-
-        {/* 搜索状态指示器 */}
-        {searchStatus === 'loading' && (
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200 animate-fadeIn">
-            <div className="flex items-center">
-              <div className="w-10 h-10 mr-4 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center shadow-sm">
-                <svg className="animate-spin w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            {/* 交换按钮 - 在移动端隐藏，桌面端显示 */}
+            <div className="hidden lg:flex flex-shrink-0 pb-2">
+              <button
+                type="button"
+                className="w-8 h-8 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors duration-200 shadow-md hover:shadow-lg"
+                onClick={() => {
+                  const temp = origin;
+                  setOrigin(destination);
+                  setDestination(temp);
+                }}
+                title="交换出发地和目的地"
+              >
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
-              </div>
-              <div>
-                <p className="text-blue-800 font-medium">正在搜索航班...</p>
-                <p className="text-blue-600 text-sm">使用简化搜索引擎，为您快速查找最优航班</p>
-              </div>
+              </button>
+            </div>
+
+            {/* 目的地 */}
+            <div className="flex-1">
+              <label htmlFor="destination-input" className="block text-sm text-gray-700 mb-2 font-medium">目的地</label>
+              <AirportSelector
+                value={destination}
+                onChange={setDestination}
+                placeholder="选择目的地机场"
+                mode="dep"
+                className="w-full"
+              />
+            </div>
+
+            {/* 出发日期 */}
+            <div className="flex-1">
+              <label htmlFor="departure-date" className="block text-sm text-gray-700 mb-2 font-medium">出发日期</label>
+              <input
+                id="departure-date"
+                type="date"
+                value={departureDate}
+                onChange={(e) => setDepartureDate(e.target.value)}
+                min={getTodayDate()}
+                className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white transition-all duration-200 hover:border-gray-400"
+                required
+                aria-label="选择出发日期"
+              />
+            </div>
+
+            {/* 舱位 */}
+            <div className="flex-1">
+              <label htmlFor="cabin-class" className="block text-sm text-gray-700 mb-2 font-medium">舱位</label>
+              <select
+                id="cabin-class"
+                value={cabinClass}
+                onChange={(e) => setCabinClass(e.target.value)}
+                className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white transition-all duration-200 hover:border-gray-400 appearance-none cursor-pointer"
+                aria-label="选择舱位等级"
+              >
+                <option value="ECONOMY">经济舱</option>
+                <option value="BUSINESS">商务舱</option>
+              </select>
+            </div>
+
+            {/* 搜索按钮 */}
+            <div className="flex-shrink-0">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-8 py-3 rounded-xl font-medium transition-colors duration-200 disabled:cursor-not-allowed whitespace-nowrap shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none"
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>搜索中...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center space-x-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span>搜索</span>
+                  </div>
+                )}
+              </button>
             </div>
           </div>
-        )}
-      </form>
 
-      {/* 全屏加载遮罩 */}
-      <FlightSearchLoader
-        isVisible={searchStatus === 'loading'}
-        searchParams={{
-          origin: selectedOriginAirportInfo?.name || originIata,
-          destination: selectedDestinationAirportInfo?.name || destinationIata,
-          departureDate: departureDate,
-        }}
-      />
+          {/* 移动端交换按钮 - 更简洁 */}
+          <div className="lg:hidden flex justify-center mt-3">
+            <button
+              type="button"
+              className="w-8 h-8 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors duration-200 shadow-sm"
+              onClick={() => {
+                const temp = origin;
+                setOrigin(destination);
+                setDestination(temp);
+              }}
+              title="交换出发地和目的地"
+              aria-label="交换出发地和目的地"
+            >
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   );
 };

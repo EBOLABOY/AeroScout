@@ -6,6 +6,7 @@ from typing import Optional, List, Dict, Any
 
 class UserBase(BaseModel):
     """Base User Schema"""
+    username: str = Field(..., min_length=2, max_length=50, json_schema_extra={"example": "john_doe"})
     email: EmailStr = Field(..., json_schema_extra={"example": "user@example.com"})
 
 class UserCreate(UserBase):

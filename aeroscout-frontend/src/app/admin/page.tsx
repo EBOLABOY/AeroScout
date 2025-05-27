@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '../../store/authStore';
 import axios from 'axios';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { createInvitationCode, populateHubs } from '@/lib/apiService';
 
-const AdminPage: React.FC = () => {
-  const router = useRouter();
-  const { isAuthenticated, isAdmin, currentUser, logout } = useAuthStore();
+import Link from 'next/link';
+import { createInvitationCode, populateHubs } from '../../lib/apiService';
+import AuthGuard from '../../components/AuthGuard';
+
+const AdminContent: React.FC = () => {
+  const { currentUser, logout } = useAuthStore();
 
   const [invitationCode, setInvitationCode] = useState<string | null>(null);
   const [invitationError, setInvitationError] = useState<string | null>(null);
@@ -18,30 +18,13 @@ const AdminPage: React.FC = () => {
   const [populateHubsMessage, setPopulateHubsMessage] = useState<string | null>(null);
   const [populateHubsError, setPopulateHubsError] = useState<string | null>(null);
   const [populateHubsLoading, setPopulateHubsLoading] = useState<boolean>(false);
-  
-  const [showUserMenu, setShowUserMenu] = useState(false);
+
+
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    // 如果用户未认证或不是管理员，则重定向到登录页或首页
-    // 确保在客户端执行
-    if (typeof window !== 'undefined') {
-      if (!isAuthenticated) {
-        router.replace('/auth/login');
-      } else if (!isAdmin) {
-        // 如果已登录但不是管理员，可以重定向到仪表盘或提示无权限
-        // 这里暂时重定向到仪表盘
-        router.replace('/dashboard');
-      }
-    }
-  }, [isAuthenticated, isAdmin, router]);
-
-  // 确保在认证和权限检查通过后再渲染内容
-  if (!isAuthenticated || !isAdmin) {
-    // 可以显示一个加载状态或者 null，直到 useEffect 中的重定向完成
-    return <div className="flex justify-center items-center h-screen"><p>Loading or unauthorized...</p></div>;
-  }
+  }, []);
 
   const handleCreateInvitation = async () => {
     setInvitationLoading(true);
@@ -97,77 +80,27 @@ const AdminPage: React.FC = () => {
             </button>
           </div>
 
-          {/* 桌面端导航 - 根据登录状态显示不同内容 */}
+          {/* 桌面端导航 - 管理员页面简化版 */}
           {mounted && (
             <div className="hidden md:flex items-center space-x-4">
-              {isAuthenticated ? (
-                <>
-                  <Link
-                    href="/dashboard"
-                    className="text-[14px] font-medium text-[#1D1D1F] hover:text-[#0071E3] px-3 py-1.5 rounded-full transition-apple"
-                  >
-                    控制面板
-                  </Link>
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowUserMenu(!showUserMenu)}
-                      className="flex items-center space-x-2 text-[14px] font-medium text-[#1D1D1F] hover:text-[#0071E3] px-3 py-1.5 rounded-full transition-apple"
-                    >
-                      <span>{currentUser?.email || '用户'}</span>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className={`h-4 w-4 transition-transform ${showUserMenu ? 'rotate-180' : ''}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-
-                    {showUserMenu && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-apple shadow-apple-sm border border-[#E8E8ED] py-1 z-20">
-                        <Link
-                          href="/dashboard"
-                          className="block px-4 py-2 text-sm text-[#1D1D1F] hover:bg-[#F5F5F7] transition-apple"
-                        >
-                          控制面板
-                        </Link>
-                        <Link
-                          href="/settings"
-                          className="block px-4 py-2 text-sm text-[#1D1D1F] hover:bg-[#F5F5F7] transition-apple"
-                        >
-                          账户设置
-                        </Link>
-                        <button
-                          onClick={() => {
-                            logout();
-                            window.location.href = '/auth/login';
-                          }}
-                          className="block w-full text-left px-4 py-2 text-sm text-[#FF3B30] hover:bg-[#F5F5F7] transition-apple"
-                        >
-                          登出
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/auth/login"
-                    className="text-[14px] font-medium text-[#1D1D1F] hover:text-[#0071E3] px-3 py-1.5 rounded-full transition-apple"
-                  >
-                    登录
-                  </Link>
-                  <Link
-                    href="/auth/register"
-                    className="text-[14px] font-medium text-white bg-[#0071E3] hover:bg-[#0077ED] px-4 py-1.5 rounded-full shadow-apple-sm transition-apple"
-                  >
-                    注册
-                  </Link>
-                </>
-              )}
+              <Link
+                href="/dashboard"
+                className="text-[14px] font-medium text-[#1D1D1F] hover:text-[#0071E3] px-3 py-1.5 rounded-full transition-apple"
+              >
+                控制面板
+              </Link>
+              <span className="text-[14px] font-medium text-[#1D1D1F]">
+                {currentUser?.username || '管理员'}
+              </span>
+              <button
+                onClick={() => {
+                  logout();
+                  window.location.href = '/auth/login';
+                }}
+                className="text-[14px] font-medium text-[#FF3B30] hover:text-[#FF453A] px-3 py-1.5 rounded-full transition-apple"
+              >
+                登出
+              </button>
             </div>
           )}
         </div>
@@ -210,7 +143,7 @@ const AdminPage: React.FC = () => {
             <p className="text-[15px] text-[#86868B] mb-6">
               创建新的邀请码，用于邀请新用户注册系统
             </p>
-            
+
             <button
               onClick={handleCreateInvitation}
               disabled={invitationLoading}
@@ -218,7 +151,7 @@ const AdminPage: React.FC = () => {
             >
               {invitationLoading ? '生成中...' : '生成邀请码'}
             </button>
-            
+
             {invitationCode && (
               <div className="mt-6 p-4 bg-white border border-[#E5E5EA] rounded-xl">
                 <p className="font-medium text-[#1D1D1F] mb-2">新邀请码:</p>
@@ -227,7 +160,7 @@ const AdminPage: React.FC = () => {
                 </div>
               </div>
             )}
-            
+
             {invitationError && (
               <div className="mt-6 p-4 bg-[#FEF2F2] border border-[#FECACA] rounded-xl">
                 <p className="font-medium text-[#EF4444] mb-2">错误:</p>
@@ -247,7 +180,7 @@ const AdminPage: React.FC = () => {
             <p className="text-[15px] text-[#86868B] mb-6">
               更新系统中的枢纽城市数据，用于航班搜索优化
             </p>
-            
+
             <button
               onClick={handlePopulateHubs}
               disabled={populateHubsLoading}
@@ -255,14 +188,14 @@ const AdminPage: React.FC = () => {
             >
               {populateHubsLoading ? '更新中...' : '更新中国枢纽城市'}
             </button>
-            
+
             {populateHubsMessage && (
               <div className="mt-6 p-4 bg-white border border-[#E5E5EA] rounded-xl">
                 <p className="font-medium text-[#1D1D1F] mb-2">更新结果:</p>
                 <p className="text-[#34C759]">{populateHubsMessage}</p>
               </div>
             )}
-            
+
             {populateHubsError && (
               <div className="mt-6 p-4 bg-[#FEF2F2] border border-[#FECACA] rounded-xl">
                 <p className="font-medium text-[#EF4444] mb-2">错误:</p>
@@ -282,6 +215,14 @@ const AdminPage: React.FC = () => {
         </div>
       </footer>
     </div>
+  );
+};
+
+const AdminPage: React.FC = () => {
+  return (
+    <AuthGuard requireAuth={true} requireAdmin={true}>
+      <AdminContent />
+    </AuthGuard>
   );
 };
 

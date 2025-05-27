@@ -28,6 +28,13 @@ COPY ./app ./app
 COPY ./alembic ./alembic
 COPY alembic.ini .
 
+# Copy initialization scripts
+COPY init_default_admin.py .
+COPY docker-entrypoint.sh .
+
+# Make entrypoint script executable
+RUN chmod +x docker-entrypoint.sh
+
 # Create cache directory for task status
 RUN mkdir -p cache
 
@@ -43,6 +50,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
 
-# Run uvicorn server when the container launches
-# Use 0.0.0.0 to allow connections from outside the container
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Run the entrypoint script when the container launches
+CMD ["./docker-entrypoint.sh"]

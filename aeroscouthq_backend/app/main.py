@@ -15,7 +15,7 @@ from app.core.redis_manager import redis_manager  # 添加 Redis 管理器
 from app.core.search_session_manager import search_session_manager  # 添加搜索会话管理器
 
 # Import API endpoint routers
-from app.apis.v1.endpoints import auth, users, admin, poi, flights, tasks, legal # Added legal for legal content endpoints
+from app.apis.v1.endpoints import auth, users, admin, poi, tasks, legal # Added legal for legal content endpoints
 from app.apis.v2.endpoints import flights as flights_v2  # Added V2 flights endpoints
 from app.apis.v2.endpoints import simplified_flights  # Added simplified flights endpoints
 
@@ -100,7 +100,6 @@ api_router_v1.include_router(auth.router, prefix="/auth", tags=["Authentication"
 api_router_v1.include_router(users.router, prefix="/users", tags=["Users"])
 api_router_v1.include_router(admin.router, prefix="/admin", tags=["Admin"]) # Includes admin endpoints
 api_router_v1.include_router(poi.router, prefix="/poi", tags=["POI"]) # Added POI endpoints
-api_router_v1.include_router(flights.router, prefix="/flights", tags=["Flights"])
 api_router_v1.include_router(tasks.router, prefix="/tasks", tags=["Tasks"]) # Added tasks endpoints
 api_router_v1.include_router(legal.router, prefix="/legal", tags=["Legal"]) # Added legal endpoints
 

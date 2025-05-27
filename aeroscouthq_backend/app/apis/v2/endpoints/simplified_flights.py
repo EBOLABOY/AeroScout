@@ -9,9 +9,9 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi.responses import JSONResponse
 from typing import Optional
 
-from app.apis.v1.schemas import FlightSearchRequest
+from app.apis.v1.schemas import FlightSearchRequest, UserResponse
 from app.services.simplified_flight_service import SimplifiedFlightService
-from app.core.dependencies import get_current_user_optional
+from app.core.dependencies import get_current_active_user, RateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,8 @@ async def search_flights_simple(
     request: FlightSearchRequest,
     include_direct: bool = Query(True, description="是否包含直飞航班"),
     include_hidden_city: bool = Query(True, description="是否包含隐藏城市航班"),
-    current_user: Optional[dict] = Depends(get_current_user_optional)
+    current_user: UserResponse = Depends(get_current_active_user),
+    _ = Depends(RateLimiter(limit_type="flight"))
 ) -> Dict[str, Any]:
     """
     简化的航班搜索API
@@ -39,8 +40,7 @@ async def search_flights_simple(
         包含直飞和隐藏城市航班的搜索结果
     """
     try:
-        username = current_user.get('username', 'anonymous') if current_user else 'anonymous'
-        logger.info(f"用户 {username} 发起简化航班搜索")
+        logger.info(f"用户 {current_user.email} 发起简化航班搜索")
         logger.info(f"搜索参数: {request.origin_iata} -> {request.destination_iata}")
         logger.info(f"出发日期: {request.departure_date_from}")
         logger.info(f"包含类型: 直飞={include_direct}, 隐藏城市={include_hidden_city}")
@@ -80,9 +80,8 @@ async def search_flights_simple(
             include_hidden_city=include_hidden_city
         )
 
-        # 添加用户信息到结果中 - 修复空指针问题
-        logger.info(f"[simple_{int(time.time() * 1000)}] current_user类型: {type(current_user)}, 值: {current_user}")
-        results["user_id"] = current_user.get("id") if current_user else None
+        # 添加用户信息到结果中
+        results["user_id"] = current_user.id
         results["search_params"] = {
             "origin": request.origin_iata,
             "destination": request.destination_iata,
@@ -114,7 +113,7 @@ async def search_flights_simple(
 @router.get("/search-status/{search_id}")
 async def get_search_status(
     search_id: str,
-    current_user: Optional[dict] = Depends(get_current_user_optional)
+    current_user: UserResponse = Depends(get_current_active_user)
 ) -> Dict[str, Any]:
     """
     获取搜索状态（为了兼容性保留，简化版本是同步的）
@@ -133,7 +132,7 @@ async def get_search_status(
             "status": "completed",
             "message": "简化搜索已完成",
             "progress": 100,
-            "user_id": current_user.get("id") if current_user else None
+            "user_id": current_user.id
         }
 
     except Exception as e:

@@ -114,7 +114,7 @@ export interface SimplifiedFlightItinerary {
   is_hidden_city: boolean;
   flight_type: 'direct' | 'hidden_city';
   hidden_destination?: SimplifiedFlightLocation;
-  throwaway_destination?: SimplifiedFlightLocation;
+  throwaway_destination?: SimplifiedFlightLocation | string;
   // 后端实际返回的数据结构
   hidden_destinations?: SimplifiedFlightLocation[];
 }

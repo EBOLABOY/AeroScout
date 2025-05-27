@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # API Usage Limits - Specific limits per type
-    POI_DAILY_LIMIT: int = 100 # Default daily limit for POI endpoints
-    FLIGHT_DAILY_LIMIT: int = 50 # Default daily limit for flight search endpoints
+    POI_DAILY_LIMIT: int = 10 # Default daily limit for POI endpoints
+    FLIGHT_DAILY_LIMIT: int = 5 # Default daily limit for flight search endpoints
 
     # Dynamic Fetcher Cache File Paths
     TRIP_COOKIE_FILE: str = "trip_cookies.json"
