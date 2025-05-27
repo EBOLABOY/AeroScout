@@ -1,13 +1,20 @@
-# 多阶段构建的前端Dockerfile
-FROM node:18-alpine AS builder
-
+# 依赖安装阶段
+FROM node:18-alpine AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # 复制package文件
 COPY package.json package-lock.json* ./
 
-# 安装依赖
-RUN npm ci --only=production
+# 安装依赖（包括devDependencies，构建时需要）
+RUN npm ci
+
+# 构建阶段
+FROM node:18-alpine AS builder
+WORKDIR /app
+
+# 从deps阶段复制node_modules
+COPY --from=deps /app/node_modules ./node_modules
 
 # 复制源代码
 COPY . .
