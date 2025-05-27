@@ -20,7 +20,32 @@
 - **存储**: 50GB
 - **操作系统**: Ubuntu 22.04 LTS
 
-## 部署步骤
+## 🚀 快速部署指南
+
+### 一键部署命令
+```bash
+# 1. 克隆项目
+git clone https://github.com/EBOLABOY/AeroScout.git
+cd AeroScout
+
+# 2. 给脚本执行权限
+chmod +x first-time-deploy.sh setup-ssl-simple.sh
+
+# 3. 执行首次部署
+./first-time-deploy.sh
+
+# 4. 配置SSL证书
+./setup-ssl-simple.sh
+```
+
+### 部署完成后访问
+- **前端**: https://AeroScout.izlx.de
+- **API**: https://AeroScout.izlx.de/api
+- **文档**: https://AeroScout.izlx.de/docs
+
+---
+
+## 📋 详细部署步骤
 
 ### 1. 准备服务器环境
 
@@ -47,13 +72,18 @@ sudo usermod -aG docker $USER
 ### 2. 上传项目文件
 
 ```bash
-# 方式1: 使用git克隆
-git clone <your-repo-url>
+# 方式1: 使用git克隆（推荐）
+git clone https://github.com/EBOLABOY/AeroScout.git
 cd AeroScout
 
 # 方式2: 使用scp上传
-scp -r ./AeroScout user@47.79.39.147:/home/user/
+scp -r ./AeroScout user@your-server-ip:/home/user/
+
+# 方式3: 如果已有项目，更新到最新版本
+git pull origin main
 ```
+
+**注意：** 项目仓库地址为 https://github.com/EBOLABOY/AeroScout
 
 ### 3. 配置环境变量
 
@@ -66,8 +96,25 @@ nano .env
 ```
 
 **必须修改的配置项：**
-- `SECRET_KEY`: 设置为强密码
+- `SECRET_KEY`: 设置为强密码 (建议使用: `AeroScout2024!@#$%^&*()_+{}|:<>?[]\\;'\",./-=~`)
 - `NEXT_PUBLIC_API_URL`: 确认为正确的后端地址 (https://AeroScout.izlx.de/api)
+
+**环境变量示例：**
+```bash
+# .env 文件内容
+SECRET_KEY=AeroScout2024!@#$%^&*()_+{}|:<>?[]\\;'\",./-=~
+NEXT_PUBLIC_API_URL=https://AeroScout.izlx.de/api
+```
+
+**安全提醒：**
+- SECRET_KEY 用于JWT令牌签名，必须保密
+- 生产环境中请使用更复杂的密钥
+- 可以使用以下命令生成随机密钥：
+  ```bash
+  openssl rand -hex 32
+  # 或
+  python -c "import secrets; print(secrets.token_urlsafe(32))"
+  ```
 
 ### 4. 部署应用
 
@@ -171,33 +218,61 @@ chmod +x setup-ssl-simple.sh
 
 ### 查看服务状态
 ```bash
-docker-compose -f docker-compose.prod.yml ps
+# 使用Nginx配置
+docker-compose -f docker-compose.nginx.yml ps
+
+# 检查所有容器健康状态
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 ```
 
 ### 查看日志
 ```bash
 # 查看所有服务日志
-docker-compose -f docker-compose.prod.yml logs -f
+docker-compose -f docker-compose.nginx.yml logs -f
 
 # 查看特定服务日志
-docker-compose -f docker-compose.prod.yml logs -f backend
-docker-compose -f docker-compose.prod.yml logs -f frontend
-docker-compose -f docker-compose.prod.yml logs -f celery
+docker-compose -f docker-compose.nginx.yml logs -f nginx
+docker-compose -f docker-compose.nginx.yml logs -f backend
+docker-compose -f docker-compose.nginx.yml logs -f frontend
+docker-compose -f docker-compose.nginx.yml logs -f celery
+
+# 查看最近的错误日志
+docker-compose -f docker-compose.nginx.yml logs --tail=50 backend
 ```
 
 ### 重启服务
 ```bash
-docker-compose -f docker-compose.prod.yml restart
+# 重启所有服务
+docker-compose -f docker-compose.nginx.yml restart
+
+# 重启特定服务
+docker-compose -f docker-compose.nginx.yml restart nginx
+docker-compose -f docker-compose.nginx.yml restart backend
 ```
 
 ### 更新应用
 ```bash
 # 拉取最新代码
-git pull
+git pull origin main
 
 # 重新构建并部署
-docker-compose -f docker-compose.prod.yml down
-docker-compose -f docker-compose.prod.yml up -d --build
+docker-compose -f docker-compose.nginx.yml down
+docker-compose -f docker-compose.nginx.yml up -d --build
+
+# 检查更新后的服务状态
+docker-compose -f docker-compose.nginx.yml ps
+```
+
+### SSL证书续期
+```bash
+# 手动续期证书
+sudo certbot renew
+
+# 重启Nginx以加载新证书
+docker-compose -f docker-compose.nginx.yml restart nginx
+
+# 设置自动续期（添加到crontab）
+echo "0 12 * * * /usr/bin/certbot renew --quiet && docker-compose -f $(pwd)/docker-compose.nginx.yml restart nginx" | sudo crontab -
 ```
 
 ### 使用监控脚本
@@ -264,34 +339,88 @@ sudo certbot --nginx -d your-domain.com
 1. **服务无法启动**
    ```bash
    # 查看详细错误信息
-   docker-compose -f docker-compose.prod.yml logs
+   docker-compose -f docker-compose.nginx.yml logs
+
+   # 检查特定服务
+   docker-compose -f docker-compose.nginx.yml logs nginx
+   docker-compose -f docker-compose.nginx.yml logs backend
    ```
 
-2. **端口被占用**
+2. **域名无法访问**
+   ```bash
+   # 检查域名解析
+   nslookup AeroScout.izlx.de
+   dig AeroScout.izlx.de
+
+   # 检查Nginx状态
+   docker-compose -f docker-compose.nginx.yml logs nginx
+
+   # 测试HTTP访问
+   curl -I http://AeroScout.izlx.de
+   curl -I https://AeroScout.izlx.de
+   ```
+
+3. **SSL证书问题**
+   ```bash
+   # 检查证书状态
+   sudo certbot certificates
+
+   # 测试证书续期
+   sudo certbot renew --dry-run
+
+   # 检查证书文件
+   sudo ls -la /etc/letsencrypt/live/AeroScout.izlx.de/
+   ```
+
+4. **端口被占用**
    ```bash
    # 查看端口使用情况
-   sudo netstat -tlnp | grep :3000
-   sudo netstat -tlnp | grep :8000
+   sudo netstat -tlnp | grep :80
+   sudo netstat -tlnp | grep :443
    ```
 
-3. **内存不足**
+5. **内存不足**
    ```bash
    # 查看内存使用
    free -h
    docker stats
+
+   # 重启服务释放内存
+   docker-compose -f docker-compose.nginx.yml restart
    ```
 
-4. **磁盘空间不足**
+6. **磁盘空间不足**
    ```bash
+   # 查看磁盘使用
+   df -h
+
    # 清理Docker
    docker system prune -a
    docker volume prune
+
+   # 清理日志文件
+   sudo journalctl --vacuum-time=7d
    ```
 
 ### 日志位置
-- Docker容器日志: `docker logs <container_name>`
-- Nginx日志: `/var/log/nginx/`
-- 系统日志: `/var/log/syslog`
+```bash
+# Docker容器日志
+docker logs aeroscout-nginx
+docker logs aeroscout-backend
+docker logs aeroscout-frontend
+docker logs aeroscout-celery
+
+# 使用docker-compose查看日志
+docker-compose -f docker-compose.nginx.yml logs nginx
+docker-compose -f docker-compose.nginx.yml logs backend
+
+# 系统日志
+sudo tail -f /var/log/syslog
+sudo journalctl -u docker -f
+
+# SSL证书日志
+sudo tail -f /var/log/letsencrypt/letsencrypt.log
+```
 
 ## 安全建议
 
@@ -302,10 +431,47 @@ sudo certbot --nginx -d your-domain.com
 5. **定期备份数据**
 6. **监控系统资源和日志**
 
-## 联系支持
+## 📞 联系支持
 
 如果遇到问题，请：
 1. 查看日志文件
 2. 检查系统资源
 3. 参考故障排除部分
 4. 联系技术支持
+
+**联系方式：**
+- 邮箱: 1242772513@izlx.de
+- 微信: Xinx--1996
+- GitHub: https://github.com/EBOLABOY/AeroScout
+
+---
+
+## 📋 部署检查清单
+
+### 部署前检查
+- [ ] 服务器满足最低配置要求
+- [ ] 域名 AeroScout.izlx.de 已正确解析
+- [ ] 防火墙已开放 80 和 443 端口
+- [ ] Docker 和 Docker Compose 已安装
+
+### 部署过程检查
+- [ ] 项目代码已从 GitHub 克隆
+- [ ] 环境变量已正确配置
+- [ ] 首次部署脚本执行成功
+- [ ] SSL 证书配置完成
+- [ ] 所有服务容器正常运行
+
+### 部署后验证
+- [ ] 前端页面可正常访问 (https://AeroScout.izlx.de)
+- [ ] API 接口正常响应 (https://AeroScout.izlx.de/api)
+- [ ] API 文档可访问 (https://AeroScout.izlx.de/docs)
+- [ ] 默认管理员账户可正常登录
+- [ ] SSL 证书有效且自动续期已配置
+
+### 安全检查
+- [ ] SECRET_KEY 已设置为强密码
+- [ ] 默认管理员密码已修改
+- [ ] 防火墙规则已正确配置
+- [ ] SSL 证书有效期正常
+
+**🎉 恭喜！AeroScout 已成功部署到生产环境！**
