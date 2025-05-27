@@ -13,8 +13,8 @@ echo -e "========================================${NC}"
 echo
 
 # 获取用户输入的API地址
-read -p "请输入后端API地址 (默认: https://AeroScout.izlx.de/api): " API_URL
-API_URL=${API_URL:-https://AeroScout.izlx.de/api}
+read -p "请输入后端API地址 (默认: http://AeroScout.izlx.de/api): " API_URL
+API_URL=${API_URL:-http://AeroScout.izlx.de/api}
 
 echo
 echo -e "${YELLOW}配置信息:${NC}"
@@ -77,9 +77,9 @@ echo -e "    🎉 首次部署完成!"
 echo -e "========================================${NC}"
 echo
 echo -e "${GREEN}📋 部署信息:${NC}"
-echo "  前端地址: https://AeroScout.izlx.de"
+echo "  前端地址: http://AeroScout.izlx.de"
 echo "  后端地址: $API_URL"
-echo "  API文档: https://AeroScout.izlx.de/docs"
+echo "  API文档: http://AeroScout.izlx.de/docs"
 echo
 echo -e "${GREEN}👤 默认管理员账户:${NC}"
 echo "  邮箱: 1242772513@qq.com"
@@ -95,11 +95,9 @@ echo
 echo -e "${BLUE}🔍 查看日志命令:${NC}"
 echo "  docker-compose -f docker-compose.nginx.yml logs -f"
 echo
-echo -e "${YELLOW}🔒 SSL证书配置:${NC}"
-echo "  1. 确保域名已正确解析到服务器IP"
-echo "  2. 运行以下命令获取SSL证书:"
-echo "     sudo apt install certbot"
-echo "     sudo certbot certonly --webroot -w /var/www/certbot -d AeroScout.izlx.de --email 1242772513@izlx.de --agree-tos"
-echo "  3. 证书获取成功后，重启Nginx:"
-echo "     docker-compose -f docker-compose.nginx.yml restart nginx"
+echo -e "${YELLOW}📝 注意事项:${NC}"
+echo "  1. 请确保域名DNS已正确配置"
+echo "  2. 防火墙需开放80端口"
+echo "  3. 首次启动可能需要几分钟时间"
+echo "  4. 请及时修改默认管理员密码"
 echo
