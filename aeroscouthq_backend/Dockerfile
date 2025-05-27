@@ -35,8 +35,9 @@ COPY docker-entrypoint.sh .
 # Make entrypoint script executable
 RUN chmod +x docker-entrypoint.sh
 
-# Create cache directory for task status
-RUN mkdir -p cache
+# Create necessary directories
+RUN mkdir -p cache data && \
+    chmod 755 cache data
 
 # Create a non-root user
 RUN adduser --disabled-password --gecos '' appuser && \

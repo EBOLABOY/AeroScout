@@ -24,7 +24,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite+aiosqlite:///./aeroscout.db
+      - DATABASE_URL=sqlite+aiosqlite:////app/data/aeroscout.db
       - SECRET_KEY=${SECRET_KEY:-your_secret_key_here_please_change_me}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
@@ -32,7 +32,7 @@ services:
       - LOG_LEVEL=WARNING
       - ENABLE_SEARCH_DEBUG_LOGS=false
     volumes:
-      - backend_data:/app/aeroscout.db
+      - backend_data:/app/data
       - backend_cache:/app/cache
       - backend_cookies:/app/trip_cookies.json
       - backend_tokens:/app/kiwi_token.json
@@ -54,7 +54,7 @@ services:
     container_name: aeroscout-celery
     restart: unless-stopped
     environment:
-      - DATABASE_URL=sqlite+aiosqlite:///./aeroscout.db
+      - DATABASE_URL=sqlite+aiosqlite:////app/data/aeroscout.db
       - SECRET_KEY=${SECRET_KEY:-your_secret_key_here_please_change_me}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
@@ -62,7 +62,7 @@ services:
       - LOG_LEVEL=WARNING
       - ENABLE_SEARCH_DEBUG_LOGS=false
     volumes:
-      - backend_data:/app/aeroscout.db
+      - backend_data:/app/data
       - backend_cache:/app/cache
       - backend_cookies:/app/trip_cookies.json
       - backend_tokens:/app/kiwi_token.json

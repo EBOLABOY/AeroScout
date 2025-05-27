@@ -4,6 +4,11 @@ set -e
 echo "🚀 AeroScout Backend 启动脚本"
 echo "================================"
 
+# 确保数据目录存在
+echo "📁 检查数据目录..."
+mkdir -p /app/data
+chmod 755 /app/data
+
 # 等待数据库准备就绪（如果使用外部数据库）
 echo "📊 检查数据库连接..."
 
