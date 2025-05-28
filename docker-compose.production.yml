@@ -40,8 +40,6 @@ services:
     volumes:
       - backend_data:/app/data
       - backend_cache:/app/cache
-      - backend_cookies:/app/trip_cookies.json
-      - backend_tokens:/app/kiwi_token.json
     depends_on:
       - redis
     networks:
@@ -71,8 +69,6 @@ services:
     volumes:
       - backend_data:/app/data
       - backend_cache:/app/cache
-      - backend_cookies:/app/trip_cookies.json
-      - backend_tokens:/app/kiwi_token.json
     depends_on:
       - redis
       - backend
