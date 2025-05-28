@@ -5,7 +5,7 @@ import { useAlertStore } from '../store/alertStore';
 
 // 创建 axios 实例
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
   headers: {
     'Content-Type': 'application/json; charset=utf-8',
     'Accept': 'application/json',
@@ -144,7 +144,7 @@ export interface FlightSearchRequestPayload {
  */
 export const searchAirports = async (params: AirportSearchRequest): Promise<AirportSearchResponse> => {
   try {
-    const response = await apiClient.post<AirportSearchResponse>('/poi/search', params);
+    const response = await apiClient.post<AirportSearchResponse>('/api/v1/poi/search', params);
     return response.data;
   } catch (error) {
     throw error;
@@ -159,7 +159,7 @@ export const searchAirports = async (params: AirportSearchRequest): Promise<Airp
  */
 export const searchPoi = async (params: PoiSearchRequest): Promise<PoiSearchResponse> => {
   try {
-    const response = await apiClient.post<PoiSearchResponse>('/poi/search', params);
+    const response = await apiClient.post<PoiSearchResponse>('/api/v1/poi/search', params);
     return response.data;
   } catch (error) {
     // 错误已在拦截器中处理并显示提示，这里不再需要console.error
@@ -290,7 +290,7 @@ export interface UnifiedSearchResponse {
  */
 export const getTaskResult = async (taskId: string): Promise<TaskResultResponse> => {
   try {
-    const response = await apiClient.get<TaskResultResponse>(`/tasks/results/${taskId}`);
+    const response = await apiClient.get<TaskResultResponse>(`/api/v1/tasks/results/${taskId}`);
     return response.data;
   } catch (error) {
     // 错误已在拦截器中处理并显示提示
@@ -313,7 +313,7 @@ export interface PopulateHubsResponse {
  */
 export const createInvitationCode = async (): Promise<CreateInvitationResponse> => {
   try {
-    const response = await apiClient.post<CreateInvitationResponse>('/admin/invitations');
+    const response = await apiClient.post<CreateInvitationResponse>('/api/v1/admin/invitations');
     return response.data;
   } catch (error) {
     // 错误已在拦截器中处理并显示提示
@@ -327,7 +327,7 @@ export const createInvitationCode = async (): Promise<CreateInvitationResponse> 
  */
 export const populateHubs = async (): Promise<PopulateHubsResponse> => {
   try {
-    const response = await apiClient.post<PopulateHubsResponse>('/admin/populate-hubs');
+    const response = await apiClient.post<PopulateHubsResponse>('/api/v1/admin/populate-hubs');
     return response.data;
   } catch (error) {
     // 错误已在拦截器中处理并显示提示
@@ -406,7 +406,7 @@ export interface InvitationCodeResponse {
  */
 export const getUserRecentSearches = async (limit: number = 10): Promise<RecentSearchResponse> => {
   try {
-    const response = await apiClient.get<RecentSearchResponse>(`/users/me/recent-searches?limit=${limit}`);
+    const response = await apiClient.get<RecentSearchResponse>(`/api/v1/users/me/recent-searches?limit=${limit}`);
     return response.data;
   } catch (error) {
     // 错误已在拦截器中处理并显示提示
@@ -652,7 +652,6 @@ export const searchFlightsV2 = async (searchData: FlightSearchRequestV2): Promis
 
     // 使用V2 simplified flights端点
     const response = await apiClient.post<SimplifiedSearchResponse>('/v2/flights/search-simple', requestData, {
-      baseURL: 'http://localhost:8000/api',
       params: {
         include_direct: true,
         include_hidden_city: true

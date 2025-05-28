@@ -262,11 +262,26 @@ Thumbs.db
 *.lock
 backups/
 
+# 敏感文件（包含真实token和cookies）
+kiwi_token.json
+trip_cookies.json
+*.key
+*.pem
+*.crt
+
+# 测试和临时脚本
+test-*.bat
+*-test.bat
+cleanup-*.bat
+
+# 日志目录
+logs/
+
 # 注意：私人仓库 - 以下重要文件将被包含：
-# ✅ trip_cookies.json, kiwi_token.json (配置示例)
-# ✅ 所有 .bat, .sh 脚本文件
+# ✅ 所有 .bat, .sh 脚本文件（除了测试脚本）
 # ✅ 所有 docker-compose.*.yml 文件
 # ✅ 所有 nginx.*.conf 配置文件
 # ✅ 所有 .md 文档文件
 # ✅ requirements.txt, package.json 等依赖文件
 # ✅ Dockerfile 和部署脚本
+# ❌ 敏感的token和cookie文件

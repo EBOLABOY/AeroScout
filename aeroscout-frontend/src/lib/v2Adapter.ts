@@ -95,7 +95,7 @@ export interface V2EnhancedFlightItinerary {
   is_throwaway_deal?: boolean;
   data_source?: string;
   raw_data?: Record<string, unknown>;
-  
+
   // V2 增强字段
   quality_score?: number;
   hub_info?: {
@@ -198,7 +198,7 @@ export function adaptV2ResponseToV1(v2Response: V2UnifiedSearchResponse): V1Comp
 
   // 转换直飞航班
   const directFlights = v2Response.direct_flights.map(convertV2FlightToV1);
-  
+
   // 转换组合/甩尾航班
   const comboDeals = v2Response.combo_deals.map(convertV2FlightToV1);
 
@@ -227,12 +227,13 @@ export function adaptV2ResponseToV1(v2Response: V2UnifiedSearchResponse): V1Comp
 export async function callV2SearchAPI(payload: Record<string, unknown>): Promise<V1CompatibleResponse> {
   console.log('🚀 调用V2航班搜索API');
   console.log('请求payload:', payload);
-  
+
   try {
-    // 修复URL配置 - 添加完整的后端地址
-    const apiUrl = 'http://localhost:8000/api/v2/flights/search-sync';
+    // 使用环境变量配置API地址
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const apiUrl = `${baseUrl}/api/v2/flights/search-sync`;
     console.log('🔗 V2 API URL:', apiUrl);
-    
+
     // 调用V2的统一搜索接口
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -257,7 +258,7 @@ export async function callV2SearchAPI(payload: Record<string, unknown>): Promise
     console.log('  - direct_flights数量:', v2Response.direct_flights?.length || 0);
     console.log('  - combo_deals数量:', v2Response.combo_deals?.length || 0);
     console.log('  - disclaimers数量:', v2Response.disclaimers?.length || 0);
-    
+
     // 检查第一个航班的数据结构
     if (v2Response.direct_flights?.length > 0) {
       console.log('🔍 第一个直飞航班数据结构:', v2Response.direct_flights[0]);
@@ -265,13 +266,13 @@ export async function callV2SearchAPI(payload: Record<string, unknown>): Promise
     if (v2Response.combo_deals?.length > 0) {
       console.log('🔍 第一个组合航班数据结构:', v2Response.combo_deals[0]);
     }
-    
+
     // 适配为V1格式
     const adaptedResponse = adaptV2ResponseToV1(v2Response);
     console.log('🔄 适配后的响应:', adaptedResponse);
-    
+
     return adaptedResponse;
-    
+
   } catch (error) {
     console.error('❌ V2 API调用失败:', error);
     console.error('❌ 错误详情:', {
@@ -293,7 +294,7 @@ export function extractV2EnhancedInfo(flight: V1Flight): {
   disclaimers?: string[];
 } {
   const v2Enhanced = (flight.raw_data as Record<string, unknown>)?.v2_enhanced as Record<string, unknown>;
-  
+
   if (!v2Enhanced) {
     return { risk_factors: [] };
   }
@@ -305,4 +306,4 @@ export function extractV2EnhancedInfo(flight: V1Flight): {
     hub_info: v2Enhanced.hub_info as Record<string, unknown> | undefined,
     disclaimers: (v2Enhanced.disclaimers as string[]) || []
   };
-} 
+}

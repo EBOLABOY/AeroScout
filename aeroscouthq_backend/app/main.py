@@ -91,6 +91,20 @@ async def read_root():
     """
     return {"message": "Welcome to AeroScout API"}
 
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """
+    Global health check endpoint
+    """
+    from datetime import datetime
+    return {
+        "status": "healthy",
+        "message": "AeroScout API is running",
+        "timestamp": datetime.now().isoformat(),
+        "version": "0.1.0"
+    }
+
 # --- API Routers ---
 # Create a main router for V1 APIs
 api_router_v1 = APIRouter(prefix="/api/v1")

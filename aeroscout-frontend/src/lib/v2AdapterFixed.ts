@@ -97,7 +97,7 @@ export interface V2ActualFlightItinerary {
   is_throwaway_deal: boolean;
   data_source: string;
   raw_data?: Record<string, unknown>;
-  
+
   // V2增强字段
   isProbeSuggestion?: boolean;
   probeHub?: string | null;
@@ -160,11 +160,11 @@ function convertV2ActualFlightToV1(v2Flight: V2ActualFlightItinerary): V1Flight 
   console.log('🔄 转换V2航班到V1格式:', v2Flight);
   console.log('📊 原始价格信息 - price:', v2Flight.price, '(类型:', typeof v2Flight.price, '), currency:', v2Flight.currency);
   console.log('🎯 甩尾票标记 - is_hidden_city:', v2Flight.is_hidden_city, ', is_throwaway_deal:', v2Flight.is_throwaway_deal);
-  
+
   // 增强价格验证和调试
   let validatedPrice = v2Flight.price;
   const validatedCurrency = v2Flight.currency || 'CNY';
-  
+
   // 价格验证和修复
   if (validatedPrice === null || validatedPrice === undefined) {
     console.error('❌ 价格为null/undefined:', validatedPrice);
@@ -186,9 +186,9 @@ function convertV2ActualFlightToV1(v2Flight: V2ActualFlightItinerary): V1Flight 
     console.error('❌ 价格为零或负数:', validatedPrice);
     // 保持原值，让FlightCard处理显示"价格待定"
   }
-  
+
   console.log('📊 验证后价格信息 - price:', validatedPrice, '(类型:', typeof validatedPrice, '), currency:', validatedCurrency);
-  
+
   // 后端已经正确处理了价格转换，直接使用返回的平级格式
   const result = {
     id: v2Flight.id,
@@ -219,7 +219,7 @@ function convertV2ActualFlightToV1(v2Flight: V2ActualFlightItinerary): V1Flight 
       }
     }
   };
-  
+
   console.log('✅ 转换完成，最终价格:', result.price);
   return result;
 }
@@ -229,18 +229,18 @@ function convertV2ActualFlightToV1(v2Flight: V2ActualFlightItinerary): V1Flight 
  */
 function filterRelevantFlights(flights: V1Flight[], origin: string, destination: string): V1Flight[] {
   console.log('🔍 开始过滤航班，保留直飞和甩尾票');
-  
+
   return flights.filter(flight => {
     // 获取航班的起始和最终目的地
     const segments = flight.outbound_segments || flight.segments || [];
     if (segments.length === 0) return false;
-    
+
     const firstSegment = segments[0];
     const lastSegment = segments[segments.length - 1];
-    
+
     const flightOrigin = firstSegment.departure_airport;
     const flightDestination = lastSegment.arrival_airport;
-    
+
     // 特殊处理：如果航班被标记为隐藏城市或甩尾票，始终保留
     if (flight.is_hidden_city || flight.is_throwaway_deal) {
       console.log('✅ 保留甩尾票/隐藏城市航班:', flight.id,
@@ -248,7 +248,7 @@ function filterRelevantFlights(flights: V1Flight[], origin: string, destination:
         `[隐藏城市: ${flight.is_hidden_city}, 甩尾票: ${flight.is_throwaway_deal}]`);
       return true;
     }
-    
+
     // 情况1：直飞航班 (起点到终点)
     if (segments.length === 1 &&
         flightOrigin === origin &&
@@ -256,7 +256,7 @@ function filterRelevantFlights(flights: V1Flight[], origin: string, destination:
       console.log('✅ 保留直飞航班:', flight.id, `${flightOrigin} → ${flightDestination}`);
       return true;
     }
-    
+
     // 情况2：甩尾航班 (起点到终点，但中转机场为目的地机场)
     if (segments.length > 1) {
       // 检查是否有任何中转点是我们的目的地
@@ -265,13 +265,13 @@ function filterRelevantFlights(flights: V1Flight[], origin: string, destination:
         if (index === segments.length - 1) return false;
         return segment.arrival_airport === destination;
       });
-      
+
       if (flightOrigin === origin && hasDestinationAsTransfer) {
         console.log('✅ 保留甩尾航班:', flight.id, `${flightOrigin} → ${flightDestination} (经停 ${destination})`);
         return true;
       }
     }
-    
+
     console.log('❌ 过滤掉不相关航班:', flight.id, `${flightOrigin} → ${flightDestination}`);
     return false;
   });
@@ -317,18 +317,18 @@ export function adaptV2ActualResponseToV1(v2Response: V2ActualResponse, searchPa
   if (searchParams?.origin && searchParams?.destination) {
     console.log('🔍 开始过滤航班，只保留相关的直飞和甩尾航班');
     console.log(`搜索路线: ${searchParams.origin} → ${searchParams.destination}`);
-    
+
     const originalDirectCount = directFlights.length;
     const originalComboCount = comboDeals.length;
-    
+
     directFlights = filterRelevantFlights(directFlights, searchParams.origin, searchParams.destination);
     comboDeals = filterRelevantFlights(comboDeals, searchParams.origin, searchParams.destination);
-    
+
     console.log('📊 过滤结果:');
     console.log(`  直飞航班: ${originalDirectCount} → ${directFlights.length}`);
     console.log(`  组合航班: ${originalComboCount} → ${comboDeals.length}`);
     console.log(`  总计: ${originalDirectCount + originalComboCount} → ${directFlights.length + comboDeals.length}`);
-    
+
     // 诊断：检查过滤后的甩尾票
     const filteredThrowawayFlights = [...directFlights, ...comboDeals].filter(f => f.is_hidden_city || f.is_throwaway_deal);
     console.log(`  过滤后甩尾票数: ${filteredThrowawayFlights.length}`);
@@ -359,12 +359,13 @@ export function adaptV2ActualResponseToV1(v2Response: V2ActualResponse, searchPa
 export async function callV2SearchAPIFixed(payload: Record<string, unknown>): Promise<V1CompatibleResponse> {
   console.log('🚀 调用修复后的V2航班搜索API');
   console.log('请求payload:', payload);
-  
+
   try {
-    // 使用正确的后端地址
-    const apiUrl = 'http://localhost:8000/api/v2/flights/search-sync';
+    // 使用环境变量配置API地址
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const apiUrl = `${baseUrl}/api/v2/flights/search-sync`;
     console.log('🔗 V2 API URL:', apiUrl);
-    
+
     // 调用V2的统一搜索接口
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -389,7 +390,7 @@ export async function callV2SearchAPIFixed(payload: Record<string, unknown>): Pr
     console.log('  - direct_flights数量:', v2Response.direct_flights?.length || 0);
     console.log('  - combo_deals数量:', v2Response.combo_deals?.length || 0);
     console.log('  - disclaimers数量:', v2Response.disclaimers?.length || 0);
-    
+
     // 检查第一个航班的数据结构
     if (v2Response.direct_flights?.length > 0) {
       console.log('🔍 第一个直飞航班数据结构:', v2Response.direct_flights[0]);
@@ -397,19 +398,19 @@ export async function callV2SearchAPIFixed(payload: Record<string, unknown>): Pr
     if (v2Response.combo_deals?.length > 0) {
       console.log('🔍 第一个组合航班数据结构:', v2Response.combo_deals[0]);
     }
-    
+
     // 提取搜索参数用于过滤
     const searchParams = {
       origin: payload.origin_iata as string,
       destination: payload.destination_iata as string
     };
-    
+
     // 适配为V1格式，并应用过滤
     const adaptedResponse = adaptV2ActualResponseToV1(v2Response, searchParams);
     console.log('🔄 适配后的响应:', adaptedResponse);
-    
+
     return adaptedResponse;
-    
+
   } catch (error) {
     console.error('❌ V2 API调用失败:', error);
     console.error('❌ 错误详情:', {

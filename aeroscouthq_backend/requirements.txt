@@ -1,6 +1,7 @@
 fastapi
 uvicorn[standard]
 httpx
+requests  # Added for health check
 sqlalchemy
 databases[aiosqlite] # Changed from sqlite to aiosqlite for async tests
 alembic

@@ -16,7 +16,7 @@ services:
 
   # 后端API服务
   backend:
-    build: 
+    build:
       context: ./aeroscouthq_backend
       dockerfile: Dockerfile
     container_name: aeroscout-backend
@@ -43,7 +43,7 @@ services:
 
   # Celery工作进程
   celery:
-    build: 
+    build:
       context: ./aeroscouthq_backend
       dockerfile: Dockerfile
     container_name: aeroscout-celery
@@ -78,7 +78,7 @@ services:
     working_dir: /app
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://47.79.39.147:8000
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     volumes:
       - ./aeroscout-frontend-built:/app
     command: ["npm", "start"]

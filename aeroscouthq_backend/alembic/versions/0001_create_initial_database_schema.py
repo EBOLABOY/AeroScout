@@ -1,7 +1,7 @@
 """create initial database schema
 
 Revision ID: 0001
-Revises: 
+Revises:
 Create Date: 2025-05-17 23:55:00.000000
 
 """
@@ -23,7 +23,7 @@ from app.database import models  # noqa: F401
 
 
 # revision identifiers, used by Alembic.
-revision: str = '0001'
+revision: str = '0001_create_initial_database_schema'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

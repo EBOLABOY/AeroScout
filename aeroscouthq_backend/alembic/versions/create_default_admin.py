@@ -13,7 +13,7 @@ from sqlalchemy import text
 
 # revision identifiers, used by Alembic.
 revision: str = 'create_default_admin'
-down_revision: Union[str, None] = '0001_create_initial_database_schema'
+down_revision: Union[str, None] = 'c47909388e6b'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -102,7 +102,7 @@ def upgrade() -> None:
                 }
             )
 
-        print(f"✅ 默认管理员账户创建成功!")
+        print(f"[SUCCESS] 默认管理员账户创建成功!")
         print(f"   邮箱: {DEFAULT_ADMIN_EMAIL}")
         print(f"   用户名: {DEFAULT_ADMIN_USERNAME}")
         print(f"   密码: 1242772513")
@@ -110,7 +110,7 @@ def upgrade() -> None:
         print(f"   管理员权限: 是")
 
     except Exception as e:
-        print(f"❌ 创建默认管理员账户失败: {e}")
+        print(f"[ERROR] 创建默认管理员账户失败: {e}")
         raise
 
 
@@ -132,8 +132,8 @@ def downgrade() -> None:
             {"code": INVITATION_CODE}
         )
 
-        print(f"✅ 默认管理员账户已删除: {DEFAULT_ADMIN_EMAIL}")
+        print(f"[SUCCESS] 默认管理员账户已删除: {DEFAULT_ADMIN_EMAIL}")
 
     except Exception as e:
-        print(f"❌ 删除默认管理员账户失败: {e}")
+        print(f"[ERROR] 删除默认管理员账户失败: {e}")
         raise
