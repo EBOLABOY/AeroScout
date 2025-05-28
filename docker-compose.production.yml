@@ -81,14 +81,14 @@ services:
 
   # 前端服务
   frontend:
-    build: 
+    build:
       context: ./aeroscout-frontend
       dockerfile: Dockerfile
     container_name: aeroscout-frontend
     restart: unless-stopped
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=https://AeroScout.izlx.de/api
+      - NEXT_PUBLIC_API_URL=/api
       - HOSTNAME=0.0.0.0
     depends_on:
       - backend
