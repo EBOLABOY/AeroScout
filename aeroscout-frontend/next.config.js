@@ -40,17 +40,19 @@ const nextConfig = {
     unoptimized: process.env.DEPLOY_MODE === 'static' || process.env.NODE_ENV === 'development',
   },
 
-  // 添加API代理配置 - 仅在开发环境和standalone模式下使用
+  // 添加API代理配置 - 仅在开发环境下使用
   async rewrites() {
-    if (process.env.DEPLOY_MODE === 'static') {
+    // 生产环境下不使用rewrites，由nginx处理代理
+    if (process.env.NODE_ENV === 'production' || process.env.DEPLOY_MODE === 'static') {
       return [];
     }
 
+    // 开发环境下才使用rewrites
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     return [
       {
         source: '/api/:path*',
-        destination: `${backendUrl}/api/:path*`,
+        destination: `${backendUrl}/:path*`,
       },
     ];
   },
