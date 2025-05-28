@@ -38,7 +38,7 @@ services:
       - LOG_LEVEL=WARNING
       - ENABLE_SEARCH_DEBUG_LOGS=false
     volumes:
-      - ./data:/app/data
+      - backend_data:/app/data
       - backend_cache:/app/cache
       - backend_cookies:/app/trip_cookies.json
       - backend_tokens:/app/kiwi_token.json
@@ -69,7 +69,7 @@ services:
       - REDIS_URL=redis://redis:6379/2
       - LOG_LEVEL=WARNING
     volumes:
-      - ./data:/app/data
+      - backend_data:/app/data
       - backend_cache:/app/cache
       - backend_cookies:/app/trip_cookies.json
       - backend_tokens:/app/kiwi_token.json
