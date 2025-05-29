@@ -103,7 +103,7 @@ class SimplifiedFlightHelpers:
                 "children": getattr(request, 'children', 0),
                 "infants": getattr(request, 'infants', 0),
                 "adultsHoldBags": getattr(request, 'adults_hold_bags', [0]),
-                "adultsHandBags": getattr(request, 'adults_hand_bags', [1]),
+                "adultsHandBags": getattr(request, 'adults_hand_bags', [0]),
                 "childrenHoldBags": [], "childrenHandBags": []
             },
             "cabinClass": {

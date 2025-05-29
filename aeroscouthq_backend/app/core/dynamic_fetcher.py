@@ -497,3 +497,149 @@ async def _get_fresh_kiwi_headers_sync() -> Optional[Dict[str, str]]:
 
     logger.error("Kiwi token获取失败")
     return None
+
+# 添加调试函数来测试Kiwi API请求和响应
+async def debug_kiwi_api_request(origin: str = "PEK", destination: str = "LAX", departure_date: str = "2025-02-15") -> Dict[str, Any]:
+    """
+    调试函数：测试Kiwi API请求构建和响应解析
+    """
+    logger.info(f"开始调试Kiwi API请求: {origin} -> {destination}, 出发日期: {departure_date}")
+
+    try:
+        # 1. 获取headers
+        headers = await get_effective_kiwi_headers()
+        logger.info(f"获取到的Kiwi headers: {json.dumps(headers, indent=2, ensure_ascii=False)}")
+
+        # 2. 构建请求变量
+        from datetime import datetime
+        dep_date_obj = datetime.strptime(departure_date, "%Y-%m-%d")
+
+        variables = {
+            "search": {
+                "itinerary": {
+                    "source": {"ids": [f"Station:airport:{origin.upper()}"]},
+                    "destination": {"ids": [f"Station:airport:{destination.upper()}"]},
+                    "outboundDepartureDate": {
+                        "start": dep_date_obj.strftime("%Y-%m-%dT00:00:00"),
+                        "end": dep_date_obj.strftime("%Y-%m-%dT23:59:59")
+                    }
+                },
+                "passengers": {
+                    "adults": 1,
+                    "children": 0,
+                    "infants": 0,
+                    "adultsHoldBags": [0],
+                    "adultsHandBags": [1]
+                },
+                "cabinClass": {"cabinClass": "ECONOMY", "applyMixedClasses": False}
+            },
+            "filter": {
+                "maxStopsCount": 3
+            },
+            "options": {
+                "sortBy": "PRICE",
+                "currency": "cny",
+                "locale": "cn",
+                "market": "us",
+                "partnerMarket": "cn",
+                "partner": "skypicker",
+                "storeSearch": False,
+                "serverToken": None
+            }
+        }
+
+        # 3. 构建GraphQL查询（修复字段名）
+        query = """
+        query SearchOneWayItinerariesQuery(
+          $search: SearchOnewayInput
+          $filter: ItinerariesFilterInput
+          $options: ItinerariesOptionsInput
+        ) {
+          onewayItineraries(search: $search, filter: $filter, options: $options) {
+            __typename
+            ... on AppError { error: message }
+            ... on Itineraries {
+              server { requestId packageVersion serverToken }
+              metadata { itinerariesCount hasMorePending }
+              itineraries {
+                __typename
+                ... on ItineraryOneWay {
+                  id shareId
+                  price { amount priceBeforeDiscount } priceEur { amount }
+                  provider { name code } duration pnrCount
+                  travelHack { isTrueHiddenCity isVirtualInterlining isThrowawayTicket }
+                  sector {
+                    duration
+                    sectorSegments {
+                      segment {
+                        source { localTime station { name code city { name } } }
+                        destination { localTime station { name code city { name } } }
+                        duration carrier { name code } operatingCarrier { name code } cabinClass
+                        code
+                      }
+                      layover { duration isBaggageRecheck }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        """
+
+        payload = {
+            "query": query,
+            "variables": variables
+        }
+
+        logger.info(f"构建的请求负载: {json.dumps(payload, indent=2, ensure_ascii=False)}")
+
+        # 4. 发送请求
+        api_url = "https://api.skypicker.com/umbrella/v2/graphql?featureName=SearchOneWayItinerariesQuery"
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(api_url, headers=headers, json=payload)
+
+            logger.info(f"响应状态码: {response.status_code}")
+            logger.info(f"响应头: {dict(response.headers)}")
+
+            if response.status_code == 200:
+                response_data = response.json()
+                logger.info(f"原始响应数据: {json.dumps(response_data, indent=2, ensure_ascii=False)[:2000]}...")
+
+                # 5. 解析响应
+                if 'data' in response_data and response_data['data']:
+                    oneway_data = response_data['data'].get('onewayItineraries')
+                    if oneway_data and oneway_data.get('__typename') == 'Itineraries':
+                        itineraries = oneway_data.get('itineraries', [])
+                        logger.info(f"找到 {len(itineraries)} 个航班")
+
+                        # 解析第一个航班作为示例
+                        if itineraries:
+                            first_itinerary = itineraries[0]
+                            logger.info(f"第一个航班详情: {json.dumps(first_itinerary, indent=2, ensure_ascii=False)}")
+
+                            # 尝试解析为我们的格式
+                            from app.services.kiwi_flight_service import _parse_kiwi_itinerary
+                            parsed = await _parse_kiwi_itinerary(first_itinerary, is_one_way=True)
+                            if parsed:
+                                logger.info(f"解析后的航班: {parsed.model_dump()}")
+                            else:
+                                logger.error("航班解析失败")
+                    else:
+                        logger.error(f"响应格式错误或包含错误: {oneway_data}")
+                else:
+                    logger.error(f"响应数据格式错误: {response_data}")
+            else:
+                logger.error(f"请求失败: {response.status_code} - {response.text}")
+
+        return {
+            "headers": headers,
+            "payload": payload,
+            "response_status": response.status_code,
+            "response_data": response_data if response.status_code == 200 else response.text
+        }
+
+    except Exception as e:
+        logger.error(f"调试Kiwi API请求时出错: {e}", exc_info=True)
+        return {"error": str(e)}
