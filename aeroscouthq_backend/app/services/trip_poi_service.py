@@ -246,15 +246,15 @@ def process_poi_results(poi_data: Dict[str, Any], query: str) -> Dict[str, Any]:
         # REST API可能返回不同的结构，需要适配
         results = []
 
-        # 尝试从不同可能的字段中提取结果
-        if "searchResponse" in poi_data:
-            search_response = poi_data["searchResponse"]
-            if isinstance(search_response, dict):
-                results = search_response.get("results", []) or search_response.get("poiList", [])
-        elif "results" in poi_data:
-            results = poi_data.get("results", [])
-        elif "poiList" in poi_data:
-            results = poi_data.get("poiList", [])
+        # 从REST API响应中提取结果
+        results = poi_data.get("results", [])
+
+        # 添加详细的调试日志
+        logger.info(f"POI数据结构调试 - 查询: {query}")
+        logger.info(f"响应顶级键: {list(poi_data.keys()) if isinstance(poi_data, dict) else 'Not a dict'}")
+        logger.info(f"results字段类型: {type(results)}, 长度: {len(results) if isinstance(results, list) else 'Not a list'}")
+        if isinstance(results, list) and len(results) > 0:
+            logger.info(f"第一个结果的键: {list(results[0].keys()) if isinstance(results[0], dict) else 'Not a dict'}")
 
         if not results:
             logger.warning("No results found in Trip.com REST API response")
