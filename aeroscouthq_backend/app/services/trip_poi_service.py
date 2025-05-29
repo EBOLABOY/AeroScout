@@ -111,7 +111,7 @@ async def _call_trip_poi_api(search_key: str, trip_type: str, mode: str, headers
             response.raise_for_status() # Raise exception for other bad status codes
 
             data = response.json()
-            logger.debug(f"Trip.com POI API Raw Response: {json.dumps(data)}")
+            logger.info(f"Trip.com POI API Raw Response: {json.dumps(data, ensure_ascii=False)[:1000]}...")  # 显示前1000字符
 
             # Check REST API response structure
             if isinstance(data, dict):
