@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     # 甩尾票探测目的地列表 - 默认包含一些亚洲主要城市
     THROWAWAY_DESTINATIONS: List[str] = ["HKG", "TPE", "ICN", "NRT", "MNL", "SIN", "BKK", "KUL"]
 
+    # 代理配置 - 用于绕过反爬虫限制
+    HTTP_PROXY: Optional[str] = None  # 例如: "http://proxy.example.com:8080"
+    HTTPS_PROXY: Optional[str] = None  # 例如: "http://proxy.example.com:8080"
+
     @field_validator('CHINA_HUB_CITIES_FOR_PROBE', 'THROWAWAY_DESTINATIONS', mode='before')
     @classmethod
     def parse_json_string_list(cls, value: Optional[Union[str, List[str]]], info) -> List[str]:

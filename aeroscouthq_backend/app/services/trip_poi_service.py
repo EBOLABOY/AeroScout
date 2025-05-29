@@ -6,6 +6,7 @@ import httpx
 from fastapi import HTTPException, status
 
 from app.core import dynamic_fetcher
+from app.core.config import settings
 from app.database.crud import poi_crud
 from app.apis.v1.schemas import UserResponse # Assuming POI schemas might be needed later
 
@@ -80,7 +81,19 @@ async def _call_trip_poi_api(search_key: str, trip_type: str, mode: str, headers
     logger.debug(f"使用的请求头: {json.dumps({k: v for k, v in headers.items() if k != 'cookie'})}")
     logger.debug(f"Cookie长度: {len(headers.get('cookie', ''))}")
 
-    async with httpx.AsyncClient(timeout=20.0) as client:
+    # 配置代理
+    proxies = {}
+    if settings.HTTP_PROXY:
+        proxies["http://"] = settings.HTTP_PROXY
+    if settings.HTTPS_PROXY:
+        proxies["https://"] = settings.HTTPS_PROXY
+
+    client_kwargs = {"timeout": 20.0}
+    if proxies:
+        client_kwargs["proxies"] = proxies
+        logger.info(f"Using proxy for Trip.com API: {proxies}")
+
+    async with httpx.AsyncClient(**client_kwargs) as client:
         try:
             logger.debug(f"Calling Trip.com POI API: URL={TRIP_POI_API_URL}, Payload={json.dumps(payload)}")
             response = await client.post(TRIP_POI_API_URL, headers=headers, json=payload)
