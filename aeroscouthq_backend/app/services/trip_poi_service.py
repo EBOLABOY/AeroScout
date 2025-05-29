@@ -59,24 +59,36 @@ async def _call_trip_poi_api(search_key: str, trip_type: str, mode: str, headers
         logger.warning(f"未知的 trip_type 值: {trip_type}，默认使用 'RT'")
         trip_type = "RT"
 
-    # 使用REST API格式的请求体
+    # 使用真实浏览器的请求体格式
     payload = {
-        "head": {
-            "cid": "09034062418799026920",
-            "ctok": "",
-            "cver": "1.0",
-            "lang": "01",
-            "sid": "8888",
-            "syscode": "09",
-            "auth": "",
-            "extension": []
-        },
-        "searchRequest": {
-            "keyword": search_key,
-            "searchType": mode,  # 0 for departure, 1 for arrival
-            "tripType": trip_type,  # RT for round trip
-            "locale": "zh-HK",
-            "currency": "CNY"
+        "key": search_key,
+        "mode": mode,  # 字符串格式："0" 或 "1"
+        "tripType": trip_type,  # "OW" 或 "RT"
+        "ABTesting": "221213_IBU_PNC",
+        "Head": {
+            "AbTesting": "M:26,241204_IBU_FLTHOME:B;M:21,250207_IBU_FLTOLM:E;M:21,250207_IBU_FLTOLM:E;",
+            "Group": "Trip",
+            "Source": "ONLINE",
+            "Version": "3",
+            "Currency": "CNY",
+            "Locale": "zh-HK",
+            "VID": "1746708309569.1d384rgx2qT7",
+            "SessionId": "15",
+            "PvId": "6",
+            "AllianceInfo": {
+                "AllianceID": 1094387,
+                "SID": 2209817,
+                "OuID": "",
+                "UseDistributionType": 1
+            },
+            "TransactionID": "1-mf-20250529184857699-nodejs",
+            "ExtendFields": {
+                "PageId": "10320667453",
+                "Os": "Windows",
+                "OsVersion": "10",
+                "flightsignature": ""
+            },
+            "ClientID": "09034048218003791614"
         }
     }
 
