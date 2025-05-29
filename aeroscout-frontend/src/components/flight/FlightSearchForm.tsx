@@ -187,13 +187,13 @@ const FlightSearchForm: React.FC<FlightSearchFormProps> = ({ onSearch }) => {
           </div>
         </div> */}
 
-        {/* 极简主义风格 - 单行布局 */}
-        <div className="bg-white/90 backdrop-blur-2xl rounded-2xl shadow-lg border border-white/30 p-6 animate-fadeIn">
-          {/* 单行表单布局 */}
-          <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+        {/* 极简主义风格 - 响应式布局 */}
+        <div className="bg-white/90 backdrop-blur-2xl rounded-2xl shadow-lg border border-white/30 p-4 sm:p-6 animate-fadeIn">
+          {/* 响应式表单布局 */}
+          <div className="flex flex-col sm:grid sm:grid-cols-2 lg:flex lg:flex-row lg:items-end gap-3 sm:gap-4">
             {/* 出发地 */}
-            <div className="flex-1">
-              <label htmlFor="origin-input" className="block text-sm text-gray-700 mb-2 font-medium">出发地</label>
+            <div className="flex-1 sm:col-span-1">
+              <label htmlFor="origin-input" className="block text-xs sm:text-sm text-gray-700 mb-1 sm:mb-2 font-medium">出发地</label>
               <AirportSelector
                 value={origin}
                 onChange={setOrigin}
@@ -203,7 +203,38 @@ const FlightSearchForm: React.FC<FlightSearchFormProps> = ({ onSearch }) => {
               />
             </div>
 
-            {/* 交换按钮 - 在移动端隐藏，桌面端显示 */}
+            {/* 目的地 */}
+            <div className="flex-1 sm:col-span-1">
+              <label htmlFor="destination-input" className="block text-xs sm:text-sm text-gray-700 mb-1 sm:mb-2 font-medium">目的地</label>
+              <AirportSelector
+                value={destination}
+                onChange={setDestination}
+                placeholder="选择目的地机场"
+                mode="dep"
+                className="w-full"
+              />
+            </div>
+
+            {/* 交换按钮 - 移动端在两个输入框之间显示 */}
+            <div className="sm:hidden flex justify-center -my-1">
+              <button
+                type="button"
+                className="w-10 h-10 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors duration-200 shadow-md hover:shadow-lg min-h-[44px]"
+                onClick={() => {
+                  const temp = origin;
+                  setOrigin(destination);
+                  setDestination(temp);
+                }}
+                title="交换出发地和目的地"
+                aria-label="交换出发地和目的地"
+              >
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+              </button>
+            </div>
+
+            {/* 交换按钮 - 桌面端显示 */}
             <div className="hidden lg:flex flex-shrink-0 pb-2">
               <button
                 type="button"
@@ -221,41 +252,29 @@ const FlightSearchForm: React.FC<FlightSearchFormProps> = ({ onSearch }) => {
               </button>
             </div>
 
-            {/* 目的地 */}
-            <div className="flex-1">
-              <label htmlFor="destination-input" className="block text-sm text-gray-700 mb-2 font-medium">目的地</label>
-              <AirportSelector
-                value={destination}
-                onChange={setDestination}
-                placeholder="选择目的地机场"
-                mode="dep"
-                className="w-full"
-              />
-            </div>
-
             {/* 出发日期 */}
-            <div className="flex-1">
-              <label htmlFor="departure-date" className="block text-sm text-gray-700 mb-2 font-medium">出发日期</label>
+            <div className="flex-1 sm:col-span-1">
+              <label htmlFor="departure-date" className="block text-xs sm:text-sm text-gray-700 mb-1 sm:mb-2 font-medium">出发日期</label>
               <input
                 id="departure-date"
                 type="date"
                 value={departureDate}
                 onChange={(e) => setDepartureDate(e.target.value)}
                 min={getTodayDate()}
-                className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white transition-all duration-200 hover:border-gray-400"
+                className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white transition-all duration-200 hover:border-gray-400 min-h-[48px]"
                 required
                 aria-label="选择出发日期"
               />
             </div>
 
             {/* 舱位 */}
-            <div className="flex-1">
-              <label htmlFor="cabin-class" className="block text-sm text-gray-700 mb-2 font-medium">舱位</label>
+            <div className="flex-1 sm:col-span-1">
+              <label htmlFor="cabin-class" className="block text-xs sm:text-sm text-gray-700 mb-1 sm:mb-2 font-medium">舱位</label>
               <select
                 id="cabin-class"
                 value={cabinClass}
                 onChange={(e) => setCabinClass(e.target.value)}
-                className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white transition-all duration-200 hover:border-gray-400 appearance-none cursor-pointer"
+                className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white transition-all duration-200 hover:border-gray-400 appearance-none cursor-pointer min-h-[48px]"
                 aria-label="选择舱位等级"
               >
                 <option value="ECONOMY">经济舱</option>
@@ -264,47 +283,30 @@ const FlightSearchForm: React.FC<FlightSearchFormProps> = ({ onSearch }) => {
             </div>
 
             {/* 搜索按钮 */}
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 sm:col-span-2 lg:col-span-1">
               <button
                 type="submit"
                 disabled={isLoading}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-8 py-3 rounded-xl font-medium transition-colors duration-200 disabled:cursor-not-allowed whitespace-nowrap shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none"
+                className="w-full lg:w-auto bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 sm:px-8 py-3 rounded-xl font-medium transition-colors duration-200 disabled:cursor-not-allowed whitespace-nowrap shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none min-h-[48px]"
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center space-x-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span>搜索中...</span>
+                    <span className="text-sm sm:text-base">搜索中...</span>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center space-x-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                    <span>搜索</span>
+                    <span className="text-sm sm:text-base">搜索</span>
                   </div>
                 )}
               </button>
             </div>
           </div>
 
-          {/* 移动端交换按钮 - 更简洁 */}
-          <div className="lg:hidden flex justify-center mt-3">
-            <button
-              type="button"
-              className="w-8 h-8 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors duration-200 shadow-sm"
-              onClick={() => {
-                const temp = origin;
-                setOrigin(destination);
-                setDestination(temp);
-              }}
-              title="交换出发地和目的地"
-              aria-label="交换出发地和目的地"
-            >
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-              </svg>
-            </button>
-          </div>
+
         </div>
       </form>
     </div>

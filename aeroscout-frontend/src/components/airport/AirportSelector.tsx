@@ -33,6 +33,7 @@ const SimpleAirportSelector: React.FC<SimpleAirportSelectorProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
 
   // 防抖搜索函数
   const searchAirportsDebounced = useCallback(async (searchQuery: string) => {
@@ -120,6 +121,28 @@ const SimpleAirportSelector: React.FC<SimpleAirportSelectorProps> = ({
     onChange(airport);
   };
 
+  // 处理触摸滚动 - 防止页面滚动
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartY(e.touches[0].clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!dropdownRef.current || touchStartY === null) return;
+
+    const touchY = e.touches[0].clientY;
+    const deltaY = touchY - touchStartY;
+    const dropdown = dropdownRef.current;
+
+    // 检查是否在下拉菜单的边界
+    const isAtTop = dropdown.scrollTop === 0 && deltaY > 0;
+    const isAtBottom = dropdown.scrollTop + dropdown.clientHeight >= dropdown.scrollHeight && deltaY < 0;
+
+    // 如果在边界且试图继续滚动，阻止默认行为
+    if (isAtTop || isAtBottom) {
+      e.preventDefault();
+    }
+  };
+
   // 处理键盘导航
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!isOpen || airports.length === 0) return;
@@ -148,9 +171,18 @@ const SimpleAirportSelector: React.FC<SimpleAirportSelectorProps> = ({
     }
   };
 
-  // 处理点击外部关闭
+  // 处理点击外部关闭 - 移动端优化
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+
+      if (containerRef.current && !containerRef.current.contains(target)) {
+        setIsOpen(false);
+        setSelectedIndex(-1);
+      }
+    };
+
+    const handleTouchOutside = (event: TouchEvent) => {
       const target = event.target as Node;
 
       if (containerRef.current && !containerRef.current.contains(target)) {
@@ -161,8 +193,10 @@ const SimpleAirportSelector: React.FC<SimpleAirportSelectorProps> = ({
 
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleTouchOutside, { passive: true });
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('touchstart', handleTouchOutside);
       };
     }
   }, [isOpen]);
@@ -201,8 +235,10 @@ const SimpleAirportSelector: React.FC<SimpleAirportSelectorProps> = ({
           }}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white transition-all duration-200 hover:border-gray-400 text-[14px] font-medium placeholder:text-gray-400"
+          className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white transition-all duration-200 hover:border-gray-400 text-[14px] sm:text-[14px] font-medium placeholder:text-gray-400 min-h-[48px] text-[16px]"
           autoComplete="off"
+          inputMode="search"
+          enterKeyHint="search"
         />
 
         {/* 搜索图标或加载指示器 */}
@@ -227,14 +263,19 @@ const SimpleAirportSelector: React.FC<SimpleAirportSelectorProps> = ({
         </div>
       </div>
 
-      {/* 下拉菜单 */}
+      {/* 下拉菜单 - 移动端优化 */}
       {isOpen && (
         <div
           ref={dropdownRef}
-          className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto z-50 animate-slideDown"
+          className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 sm:max-h-80 overflow-y-auto z-50 animate-slideDown mobile-scroll"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
           style={{
-            minWidth: '300px',
+            minWidth: '280px',
+            maxWidth: '100vw',
             boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15)',
+            WebkitOverflowScrolling: 'touch', // iOS 滚动优化
+            overscrollBehavior: 'contain', // 防止滚动链
           }}
         >
           {isLoading ? (
@@ -248,24 +289,40 @@ const SimpleAirportSelector: React.FC<SimpleAirportSelectorProps> = ({
                 <div
                   key={airport.code}
                   onClick={() => handleAirportSelect(airport)}
-                  className={`mx-1 px-3 py-3 cursor-pointer transition-all duration-150 rounded-lg ${
+                  onTouchStart={(e) => {
+                    // 防止触摸时的默认行为
+                    e.currentTarget.style.backgroundColor = index === selectedIndex ? '#3B82F6' : '#F9FAFB';
+                  }}
+                  onTouchEnd={(e) => {
+                    // 恢复原始样式
+                    setTimeout(() => {
+                      if (e.currentTarget) {
+                        e.currentTarget.style.backgroundColor = '';
+                      }
+                    }, 150);
+                  }}
+                  className={`mx-1 px-3 py-4 sm:py-3 cursor-pointer transition-all duration-150 rounded-lg min-h-[56px] sm:min-h-[auto] flex items-center ${
                     index === selectedIndex
                       ? 'bg-blue-500 text-white'
-                      : 'hover:bg-gray-50 text-gray-900'
+                      : 'hover:bg-gray-50 text-gray-900 active:bg-gray-100'
                   }`}
+                  style={{
+                    WebkitTapHighlightColor: 'transparent', // 移除iOS点击高亮
+                    touchAction: 'manipulation', // 优化触摸响应
+                  }}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between w-full">
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-[14px] truncate">
+                      <div className="font-medium text-[14px] sm:text-[14px] truncate">
                         {airport.name}
                       </div>
-                      <div className={`text-[12px] truncate ${
+                      <div className={`text-[12px] sm:text-[12px] truncate mt-0.5 ${
                         index === selectedIndex ? 'text-white/80' : 'text-gray-500'
                       }`}>
                         {airport.city}, {airport.country}
                       </div>
                     </div>
-                    <div className={`text-[12px] font-mono font-bold px-2 py-1 rounded ml-3 ${
+                    <div className={`text-[11px] sm:text-[12px] font-mono font-bold px-2 py-1 rounded ml-3 flex-shrink-0 ${
                       index === selectedIndex
                         ? 'bg-white/20 text-white'
                         : 'bg-gray-100 text-gray-700'

@@ -445,14 +445,18 @@ const FlightCard: React.FC<{
 
 
   return (
-    <div className={`bg-white rounded-3xl shadow-lg border-2 p-8 hover:shadow-xl transition-all duration-300 ${
+    <div className={`bg-white rounded-2xl sm:rounded-3xl shadow-lg border-2 p-4 sm:p-6 lg:p-8 hover:shadow-xl transition-all duration-300 touch-manipulation ${
       isHiddenCity ? 'border-[#8B5CF6] bg-gradient-to-br from-[#F8F5FF] via-white to-[#FEFCFF]' : 'border-[#E2E8F0]'
-    }`}>
-      {/* 头部信息 - 增强版 */}
-      <div className="flex items-start justify-between mb-8">
-        <div className="flex flex-col space-y-3">
-          <div className="flex items-center space-x-3">
-            <div className={`px-5 py-2.5 rounded-full text-[14px] font-bold shadow-lg ${
+    }`}
+    style={{
+      WebkitTapHighlightColor: 'transparent',
+      touchAction: 'manipulation'
+    }}>
+      {/* 头部信息 - 移动端优化 */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-4 sm:space-y-0 mb-6 sm:mb-8">
+        <div className="flex flex-col space-y-2 sm:space-y-3 min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className={`px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-full text-[12px] sm:text-[14px] font-bold shadow-lg ${
               isHiddenCity
                 ? 'bg-gradient-to-r from-[#8B5CF6] to-[#A855F7] text-white'
                 : flight.display_flight_type === '直达'
@@ -462,79 +466,79 @@ const FlightCard: React.FC<{
               {flight.display_flight_type}
             </div>
             {isVirtualInterlining && (
-              <div className="px-3 py-1.5 rounded-full text-[12px] font-semibold bg-[#EF4444] text-white shadow-md">
+              <div className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-[12px] font-semibold bg-[#EF4444] text-white shadow-md">
                 虚拟联运
               </div>
             )}
             {flight.booking_options && flight.booking_options.length > 1 && (
-              <div className="px-3 py-1.5 rounded-full text-[12px] font-semibold bg-[#F59E0B] text-white shadow-md">
+              <div className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-[12px] font-semibold bg-[#F59E0B] text-white shadow-md">
                 {flight.booking_options.length} PNR
               </div>
             )}
           </div>
-          <div className="text-[13px] text-[#64748B] font-medium">
+          <div className="text-[11px] sm:text-[13px] text-[#64748B] font-medium">
             航班 #{getShortFlightId(flight.id)}
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-[32px] font-bold text-[#1E293B] leading-none">
+        <div className="text-left sm:text-right flex-shrink-0">
+          <div className="text-[24px] sm:text-[28px] lg:text-[32px] font-bold text-[#1E293B] leading-none">
             {currencySymbol}{price.toLocaleString()}
           </div>
-          <div className="text-[14px] text-[#64748B] mt-1">
+          <div className="text-[12px] sm:text-[14px] text-[#64748B] mt-1">
             {currency} • {flight.booking_options?.length || 1} 个选项
           </div>
           {flight.booking_options && flight.booking_options.length > 1 && (
-            <div className="text-[12px] text-[#10B981] mt-1">
+            <div className="text-[10px] sm:text-[12px] text-[#10B981] mt-1">
               最低价格
             </div>
           )}
         </div>
       </div>
 
-      {/* 主要航班信息 - 增强版 */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-10 flex-1">
+      {/* 主要航班信息 - 移动端优化 */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-6 lg:space-y-0 mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 lg:space-x-10 flex-1">
           {/* 出发信息 */}
-          <div className="text-center min-w-0 flex-shrink-0">
-            <div className="text-[32px] font-bold text-[#1E293B] leading-none">
+          <div className="text-center sm:text-left min-w-0 flex-shrink-0">
+            <div className="text-[24px] sm:text-[28px] lg:text-[32px] font-bold text-[#1E293B] leading-none">
               {departureInfo.code}
             </div>
-            <div className="text-[18px] font-semibold text-[#1E293B] mt-2">
+            <div className="text-[14px] sm:text-[16px] lg:text-[18px] font-semibold text-[#1E293B] mt-1 sm:mt-2">
               {formatTime(flight.user_journey_segments_to_display && flight.user_journey_segments_to_display.length > 0
                 ? flight.user_journey_segments_to_display[0]?.departure?.local_time
                 : flight.ticketed_departure_datetime_local || '')}
             </div>
-            <div className="text-[14px] text-[#64748B] font-semibold mt-1 max-w-[140px] truncate">
+            <div className="text-[12px] sm:text-[14px] text-[#64748B] font-semibold mt-1 max-w-[120px] sm:max-w-[140px] truncate mx-auto sm:mx-0">
               {departureInfo.name}
             </div>
-            <div className="text-[13px] text-[#94A3B8] mt-0.5">
+            <div className="text-[11px] sm:text-[13px] text-[#94A3B8] mt-0.5">
               {departureInfo.city}
             </div>
           </div>
 
-          {/* 航班路径 - 增强版 */}
-          <div className="flex-1 text-center px-6">
-            <div className="text-[16px] text-[#64748B] font-semibold mb-3">
+          {/* 航班路径 - 移动端优化 */}
+          <div className="flex-1 text-center px-2 sm:px-4 lg:px-6">
+            <div className="text-[14px] sm:text-[16px] text-[#64748B] font-semibold mb-2 sm:mb-3">
               {formatDuration(flight.user_journey_duration_minutes)}
             </div>
 
-            {/* 航班路径可视化 */}
-            <div className="flex items-center justify-center space-x-4 mb-4">
-              <div className="w-4 h-4 bg-[#10B981] rounded-full shadow-lg"></div>
-              <div className="flex-1 border-t-3 border-dashed border-[#CBD5E1] relative">
+            {/* 航班路径可视化 - 移动端优化 */}
+            <div className="flex items-center justify-center space-x-2 sm:space-x-4 mb-3 sm:mb-4">
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-[#10B981] rounded-full shadow-lg"></div>
+              <div className="flex-1 border-t-2 sm:border-t-3 border-dashed border-[#CBD5E1] relative">
                 {flight.user_journey_layovers_to_display && flight.user_journey_layovers_to_display.length > 0 && (
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                    <div className="w-5 h-5 bg-[#F59E0B] rounded-full shadow-lg border-3 border-white"></div>
+                    <div className="w-3 h-3 sm:w-5 sm:h-5 bg-[#F59E0B] rounded-full shadow-lg border-2 sm:border-3 border-white"></div>
                   </div>
                 )}
               </div>
-              <div className="w-4 h-4 bg-[#EF4444] rounded-full shadow-lg"></div>
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-[#EF4444] rounded-full shadow-lg"></div>
             </div>
 
-            <div className={`text-[14px] font-bold ${stopInfo.color}`}>
+            <div className={`text-[12px] sm:text-[14px] font-bold ${stopInfo.color}`}>
               {stopInfo.text}
               {stopInfo.detail && (
-                <div className="text-[12px] text-[#64748B] mt-1 font-medium">
+                <div className="text-[10px] sm:text-[12px] text-[#64748B] mt-1 font-medium">
                   经停: {stopInfo.detail}
                 </div>
               )}
@@ -542,84 +546,88 @@ const FlightCard: React.FC<{
           </div>
 
           {/* 到达信息 */}
-          <div className="text-center min-w-0 flex-shrink-0">
-            <div className="text-[32px] font-bold text-[#1E293B] leading-none">
+          <div className="text-center sm:text-right min-w-0 flex-shrink-0">
+            <div className="text-[24px] sm:text-[28px] lg:text-[32px] font-bold text-[#1E293B] leading-none">
               {actualDestination.code}
             </div>
-            <div className="text-[18px] font-semibold text-[#1E293B] mt-2">
+            <div className="text-[14px] sm:text-[16px] lg:text-[18px] font-semibold text-[#1E293B] mt-1 sm:mt-2">
               {formatTime(flight.user_journey_arrival_datetime_local)}
             </div>
-            <div className="text-[14px] text-[#64748B] font-semibold mt-1 max-w-[140px] truncate">
+            <div className="text-[12px] sm:text-[14px] text-[#64748B] font-semibold mt-1 max-w-[120px] sm:max-w-[140px] truncate mx-auto sm:mx-0">
               {actualDestination.name}
             </div>
-            <div className="text-[13px] text-[#94A3B8] mt-0.5">
+            <div className="text-[11px] sm:text-[13px] text-[#94A3B8] mt-0.5">
               {actualDestination.city}
             </div>
           </div>
         </div>
 
-        {/* 预订按钮 */}
-        <div className="ml-10 flex-shrink-0">
+        {/* 预订按钮 - 移动端优化 */}
+        <div className="lg:ml-10 flex-shrink-0">
           <button
             onClick={() => {
               if (flight.default_booking_url) {
                 window.open(flight.default_booking_url, '_blank');
               }
             }}
-            className="bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white px-10 py-4 rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-105 text-[16px]"
+            className="w-full lg:w-auto bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] active:from-[#1E40AF] active:to-[#1E3A8A] text-white px-6 sm:px-8 lg:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold shadow-xl hover:shadow-2xl active:shadow-lg transition-all duration-200 transform hover:scale-105 active:scale-95 text-[14px] sm:text-[16px] min-h-[48px] flex items-center justify-center touch-manipulation"
+            style={{
+              WebkitTapHighlightColor: 'transparent',
+              touchAction: 'manipulation'
+            }}
           >
             立即预订
           </button>
         </div>
       </div>
 
-      {/* 详细航段信息 - 增强版 */}
+      {/* 详细航段信息 - 移动端优化 */}
       {flight.user_journey_segments_to_display && flight.user_journey_segments_to_display.length > 0 && (
-        <div className="border-t border-[#E2E8F0] pt-6">
-          <div className="text-[16px] font-semibold text-[#1E293B] mb-4 flex items-center">
-            <svg className="w-5 h-5 mr-2 text-[#64748B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="border-t border-[#E2E8F0] pt-4 sm:pt-6">
+          <div className="text-[14px] sm:text-[16px] font-semibold text-[#1E293B] mb-3 sm:mb-4 flex items-center">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-[#64748B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
             </svg>
             航段详情
           </div>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {flight.user_journey_segments_to_display.map((segment, segIndex) => (
-              <div key={segIndex} className="bg-[#F8FAFC] rounded-2xl p-4 border border-[#E2E8F0]">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-white rounded-xl px-3 py-2 border border-[#E2E8F0]">
-                      <span className="font-bold text-[14px] text-[#1E293B]">{getFullFlightNumber(segment)}</span>
+              <div key={segIndex} className="bg-[#F8FAFC] rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-[#E2E8F0]">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                  <div className="flex flex-col xs:flex-row xs:items-center space-y-2 xs:space-y-0 xs:space-x-3 sm:space-x-4">
+                    <div className="bg-white rounded-lg sm:rounded-xl px-2 sm:px-3 py-1.5 sm:py-2 border border-[#E2E8F0] self-start xs:self-auto">
+                      <span className="font-bold text-[12px] sm:text-[14px] text-[#1E293B]">{getFullFlightNumber(segment)}</span>
                     </div>
-                    <div>
-                      <div className="font-semibold text-[14px] text-[#1E293B]">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-[12px] sm:text-[14px] text-[#1E293B] truncate">
                         {segment.marketing_carrier?.name || segment.marketing_carrier?.code || 'N/A'}
                       </div>
                       {segment.operating_carrier && segment.operating_carrier.code !== segment.marketing_carrier?.code && (
-                        <div className="text-[12px] text-[#64748B]">
+                        <div className="text-[10px] sm:text-[12px] text-[#64748B] truncate">
                           执飞: {segment.operating_carrier.name || segment.operating_carrier.code}
                         </div>
                       )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-semibold text-[14px] text-[#1E293B]">
+                  <div className="text-left sm:text-right">
+                    <div className="font-semibold text-[12px] sm:text-[14px] text-[#1E293B]">
                       {segment.origin.code} → {segment.ticketed_destination.code}
                     </div>
-                    <div className="text-[12px] text-[#64748B]">
+                    <div className="text-[10px] sm:text-[12px] text-[#64748B]">
                       {formatDuration(segment.duration_minutes)}
                     </div>
                   </div>
                 </div>
-                <div className="mt-3 flex items-center justify-between text-[13px] text-[#64748B]">
-                  <div>
+                <div className="mt-2 sm:mt-3 flex flex-col xs:flex-row xs:items-center xs:justify-between space-y-1 xs:space-y-0 text-[11px] sm:text-[13px] text-[#64748B]">
+                  <div className="truncate">
                     <span className="font-medium">{formatTime(segment.departure.local_time)}</span>
-                    <span className="mx-2">•</span>
-                    <span>{segment.origin.name}</span>
+                    <span className="mx-1 sm:mx-2">•</span>
+                    <span className="truncate">{segment.origin.name}</span>
                   </div>
-                  <div className="text-right">
+                  <div className="text-left xs:text-right truncate">
                     <span className="font-medium">{formatTime(segment.arrival.local_time)}</span>
-                    <span className="mx-2">•</span>
-                    <span>{segment.ticketed_destination.name}</span>
+                    <span className="mx-1 sm:mx-2">•</span>
+                    <span className="truncate">{segment.ticketed_destination.name}</span>
                   </div>
                 </div>
               </div>
@@ -793,54 +801,57 @@ const FlightSearchResults: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7]">
-      {/* 顶部导航 */}
-      <nav className="bg-white/90 backdrop-blur-md sticky top-0 z-50 border-b border-[#E5E5EA]">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
+      {/* 顶部导航 - 移动端优化 */}
+      <nav className="bg-white/90 backdrop-blur-md sticky top-0 z-50 border-b border-[#E5E5EA] safe-top">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex justify-between items-center">
+          <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
             <button
               onClick={() => router.push('/search')}
-              className="flex items-center text-[#1D1D1F] hover:text-[#0071E3] transition-colors"
+              className="flex items-center text-[#1D1D1F] hover:text-[#0071E3] transition-colors p-1 sm:p-0 min-h-[44px]"
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              <span className="text-[14px] font-medium">返回搜索</span>
+              <span className="text-[12px] sm:text-[14px] font-medium hidden xs:inline">返回搜索</span>
             </button>
-            <div className="h-4 w-px bg-[#E5E5EA]"></div>
-            <h1 className="text-[21px] font-medium text-[#1D1D1F]">航班搜索结果</h1>
+            <div className="h-4 w-px bg-[#E5E5EA] hidden sm:block"></div>
+            <h1 className="text-[16px] sm:text-[21px] font-medium text-[#1D1D1F] truncate">
+              <span className="hidden sm:inline">航班搜索结果</span>
+              <span className="sm:hidden">搜索结果</span>
+            </h1>
           </div>
 
           {/* 搜索状态指示器 */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
             {totalFlights > 0 && (
-              <div className="bg-[#34C759]/10 text-[#34C759] px-3 py-1.5 rounded-full text-[14px] font-medium">
-                找到 {totalFlights} 个航班
+              <div className="bg-[#34C759]/10 text-[#34C759] px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-[14px] font-medium">
+                <span className="hidden xs:inline">找到 </span>{totalFlights}<span className="hidden sm:inline"> 个航班</span>
               </div>
             )}
           </div>
         </div>
       </nav>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        {/* 搜索结果头部 */}
-        <div className="mb-6">
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-[#E8E8ED]">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-[24px] font-semibold text-[#1D1D1F] mb-2">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+        {/* 搜索结果头部 - 移动端优化 */}
+        <div className="mb-4 sm:mb-6">
+          <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 border border-[#E8E8ED]">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-[18px] sm:text-[24px] font-semibold text-[#1D1D1F] mb-1 sm:mb-2 truncate">
                   {searchParams.get('origin')} → {searchParams.get('destination')}
                 </h1>
-                <p className="text-[#86868B] text-[14px]">
+                <p className="text-[#86868B] text-[12px] sm:text-[14px]">
                   {searchParams.get('departureDate')} · 单程 · {searchParams.get('cabinClass') === 'BUSINESS' ? '商务舱' : '经济舱'}
                 </p>
               </div>
-              <div className="text-right">
-                <p className="text-[#0071E3] text-[18px] font-semibold">
+              <div className="text-left sm:text-right flex-shrink-0">
+                <p className="text-[#0071E3] text-[16px] sm:text-[18px] font-semibold">
                   找到 {totalFlights} 个航班
                 </p>
                 {searchResults && (
-                  <p className="text-[#86868B] text-[12px]">
-                    搜索ID: {searchResults.search_id}
+                  <p className="text-[#86868B] text-[10px] sm:text-[12px] mt-1">
+                    搜索ID: {searchResults.search_id.substring(0, 8)}...
                   </p>
                 )}
               </div>

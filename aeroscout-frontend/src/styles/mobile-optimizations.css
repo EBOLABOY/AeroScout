@@ -1,0 +1,296 @@
+/* AeroScout 移动端优化样式 */
+
+/* 基础移动端优化 */
+@media (max-width: 640px) {
+  /* 防止iOS Safari缩放 */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  select,
+  textarea {
+    font-size: 16px !important;
+    transform: translateZ(0);
+    -webkit-appearance: none;
+  }
+
+  /* 优化触摸滚动 */
+  .touch-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* 移动端安全区域 */
+  .mobile-safe-area {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* 移动端导航栏 */
+  .mobile-nav {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  /* 航班卡片移动端优化 */
+  .flight-card-mobile {
+    /* 触摸优化 */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    
+    /* 防止文本选择 */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    
+    /* 优化渲染性能 */
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  /* 按钮触摸优化 */
+  .mobile-button {
+    min-height: 44px;
+    min-width: 44px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    cursor: pointer;
+  }
+
+  /* 移动端字体优化 */
+  .mobile-text-sm { font-size: 12px; line-height: 16px; }
+  .mobile-text-base { font-size: 14px; line-height: 20px; }
+  .mobile-text-lg { font-size: 16px; line-height: 24px; }
+  .mobile-text-xl { font-size: 18px; line-height: 28px; }
+  .mobile-text-2xl { font-size: 20px; line-height: 28px; }
+  .mobile-text-3xl { font-size: 24px; line-height: 32px; }
+
+  /* 移动端间距优化 */
+  .mobile-spacing-tight { gap: 8px; }
+  .mobile-spacing-normal { gap: 12px; }
+  .mobile-spacing-loose { gap: 16px; }
+}
+
+/* 超小屏幕优化 (iPhone SE等) */
+@media (max-width: 375px) {
+  .xs-text-sm { font-size: 11px; line-height: 15px; }
+  .xs-text-base { font-size: 13px; line-height: 18px; }
+  .xs-text-lg { font-size: 15px; line-height: 22px; }
+  
+  .xs-spacing { gap: 6px; }
+  .xs-padding { padding: 12px; }
+}
+
+/* 大屏手机优化 (iPhone Pro Max等) */
+@media (min-width: 414px) and (max-width: 640px) {
+  .lg-mobile-text { font-size: 15px; line-height: 22px; }
+  .lg-mobile-spacing { gap: 14px; }
+}
+
+/* 横屏模式优化 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .landscape-compact {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  
+  .landscape-nav {
+    height: 44px;
+  }
+}
+
+/* iOS特定优化 */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari特定样式 */
+  .ios-scroll-fix {
+    -webkit-overflow-scrolling: touch;
+    transform: translate3d(0, 0, 0);
+  }
+  
+  .ios-input-fix {
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+}
+
+/* Android特定优化 */
+@media screen and (-webkit-min-device-pixel-ratio: 0) and (min-resolution: .001dpcm) {
+  .android-scroll-fix {
+    overscroll-behavior: contain;
+  }
+}
+
+/* 高DPI屏幕优化 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .high-dpi-border {
+    border-width: 0.5px;
+  }
+  
+  .high-dpi-shadow {
+    box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* 触摸设备专用样式 */
+@media (hover: none) and (pointer: coarse) {
+  /* 移除hover效果，使用active状态 */
+  .touch-device-button:hover {
+    transform: none;
+  }
+  
+  .touch-device-button:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+  }
+  
+  /* 增大触摸目标 */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 12px;
+  }
+}
+
+/* 可访问性优化 */
+@media (prefers-reduced-motion: reduce) {
+  .motion-reduce {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* 深色模式移动端优化 */
+@media (prefers-color-scheme: dark) {
+  .dark-mobile-bg {
+    background-color: #1a1a1a;
+  }
+  
+  .dark-mobile-text {
+    color: #ffffff;
+  }
+  
+  .dark-mobile-border {
+    border-color: #333333;
+  }
+}
+
+/* 性能优化 */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* 滚动性能优化 */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 移动端表单优化 */
+.mobile-form-input {
+  font-size: 16px; /* 防止iOS缩放 */
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid #e5e5e7;
+  background: #ffffff;
+  transition: border-color 0.2s ease;
+}
+
+.mobile-form-input:focus {
+  outline: none;
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+/* 移动端卡片优化 */
+.mobile-card {
+  border-radius: 16px;
+  padding: 16px;
+  margin: 8px 0;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #f0f0f0;
+}
+
+/* 移动端按钮样式 */
+.mobile-primary-button {
+  background: linear-gradient(135deg, #007aff 0%, #0056b3 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  min-height: 48px;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.mobile-primary-button:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 4px rgba(0, 122, 255, 0.3);
+}
+
+/* 移动端导航优化 */
+.mobile-nav-item {
+  padding: 12px 16px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #1d1d1f;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-nav-item:active {
+  background-color: #f5f5f7;
+}
+
+/* 移动端列表优化 */
+.mobile-list-item {
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.mobile-list-item:active {
+  background-color: #f8f8f8;
+}
+
+/* 移动端模态框优化 */
+.mobile-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  z-index: 1000;
+}
+
+.mobile-modal-content {
+  background: white;
+  border-radius: 16px 16px 0 0;
+  padding: 24px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}

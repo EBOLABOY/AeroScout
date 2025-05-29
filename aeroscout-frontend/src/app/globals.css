@@ -634,3 +634,164 @@ html {
   height: 100dvh; /* 动态视窗高度 */
   z-index: -1;
 }
+
+/* 移动端专用样式 */
+@media (max-width: 640px) {
+  /* 移动端字体优化 */
+  body {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* 移动端按钮最小触摸目标 */
+  button,
+  .btn,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* 移动端输入框优化 */
+  input,
+  select,
+  textarea {
+    min-height: 48px;
+    font-size: 16px; /* 防止iOS缩放 */
+  }
+
+  /* 移动端导航优化 */
+  nav {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* 移动端内容区域安全区域适配 */
+  .mobile-safe-area {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* 移动端滚动优化 */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* 移动端卡片间距优化 */
+  .mobile-card-spacing {
+    margin: 0.75rem;
+    padding: 1rem;
+  }
+
+  /* 移动端文字大小调整 */
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.25rem; }
+  h4 { font-size: 1.125rem; }
+  h5 { font-size: 1rem; }
+  h6 { font-size: 0.875rem; }
+}
+
+/* 平板端样式优化 */
+@media (min-width: 641px) and (max-width: 1024px) {
+  /* 平板端布局优化 */
+  .tablet-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  /* 平板端字体大小 */
+  body {
+    font-size: 15px;
+  }
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+  /* 移除悬停效果，增加点击反馈 */
+  .hover-effect:hover {
+    transform: none;
+  }
+
+  .hover-effect:active {
+    transform: scale(0.98);
+    opacity: 0.8;
+  }
+
+  /* 增加按钮点击区域 */
+  button {
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* 高分辨率屏幕优化 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* 高分辨率图标和边框 */
+  .high-dpi-border {
+    border-width: 0.5px;
+  }
+
+  /* 高分辨率阴影 */
+  .high-dpi-shadow {
+    box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* 深色模式移动端优化 */
+@media (prefers-color-scheme: dark) and (max-width: 640px) {
+  /* 深色模式下的移动端对比度优化 */
+  body {
+    background: #000000;
+    color: #FFFFFF;
+  }
+
+  /* 深色模式下的输入框 */
+  input, select, textarea {
+    background: #1C1C1E;
+    border-color: #3A3A3C;
+    color: #FFFFFF;
+  }
+
+  /* 深色模式下的按钮 */
+  button {
+    background: #0A84FF;
+    color: #FFFFFF;
+  }
+}
+
+/* 横屏模式优化 */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* 横屏时减少垂直间距 */
+  .landscape-compact {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  /* 横屏时的导航栏 */
+  nav {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}
+
+/* 可访问性优化 */
+@media (prefers-reduced-motion: reduce) {
+  /* 减少动画 */
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  /* 增强对比度 */
+  .high-contrast {
+    border: 2px solid;
+    background: white;
+    color: black;
+  }
+}

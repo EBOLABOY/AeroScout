@@ -41,18 +41,18 @@ export default function SearchPage() {
         </div>
       </div>
 
-      {/* 精致顶部导航 - 现代毛玻璃效果 */}
-      <nav className="relative z-10 bg-white/8 backdrop-blur-3xl border-b border-white/15 shadow-lg">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
-          <Link href="/" className="group flex items-center space-x-2">
+      {/* 精致顶部导航 - 现代毛玻璃效果 - 移动端优化 */}
+      <nav className="relative z-10 bg-white/8 backdrop-blur-3xl border-b border-white/15 shadow-lg safe-top">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-5 flex justify-between items-center">
+          <Link href="/" className="group flex items-center space-x-1 sm:space-x-2">
             {/* Logo图标 */}
-            <div className="w-10 h-10 bg-gradient-to-br from-white/20 to-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm border border-white/20 group-hover:scale-110 transition-all duration-300">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-white/20 to-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm border border-white/20 group-hover:scale-110 transition-all duration-300">
+              <svg className="w-4 h-4 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
             </div>
             {/* Logo文字 */}
-            <span className="text-[26px] font-bold text-white group-hover:text-white/90 transition-all duration-300">
+            <span className="text-[20px] sm:text-[26px] font-bold text-white group-hover:text-white/90 transition-all duration-300">
               <span className="bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">AeroScout</span>
             </span>
           </Link>
@@ -65,19 +65,19 @@ export default function SearchPage() {
                   <span className="text-[14px] text-white/70">加载中...</span>
                 </div>
               ) : (
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 sm:space-x-4">
                   {isAuthenticated ? (
                     <>
                       <Link
                         href="/dashboard"
-                        className="group flex items-center space-x-2 text-[15px] font-medium text-white/80 hover:text-white transition-all duration-300 px-4 py-2.5 rounded-xl hover:bg-white/10 backdrop-blur-sm border border-white/10 hover:border-white/20"
+                        className="hidden sm:group sm:flex items-center space-x-2 text-[13px] sm:text-[15px] font-medium text-white/80 hover:text-white transition-all duration-300 px-2 sm:px-4 py-2 sm:py-2.5 rounded-xl hover:bg-white/10 backdrop-blur-sm border border-white/10 hover:border-white/20"
                       >
-                        <svg className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
-                        <span>控制面板</span>
+                        <span className="hidden sm:inline">控制面板</span>
                       </Link>
-                      <span className="text-[15px] font-medium text-white/90">
+                      <span className="text-[13px] sm:text-[15px] font-medium text-white/90 truncate max-w-[80px] sm:max-w-none">
                         {currentUser?.username || '用户'}
                       </span>
                       <button
@@ -85,7 +85,7 @@ export default function SearchPage() {
                           logout();
                           window.location.href = '/auth/login';
                         }}
-                        className="text-[14px] font-medium text-white/70 hover:text-white/90 px-3 py-1.5 rounded-lg hover:bg-white/10 transition-all duration-200"
+                        className="text-[12px] sm:text-[14px] font-medium text-white/70 hover:text-white/90 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-white/10 transition-all duration-200 min-h-[44px] flex items-center"
                       >
                         登出
                       </button>
@@ -94,18 +94,18 @@ export default function SearchPage() {
                     <>
                       <Link
                         href="/auth/login"
-                        className="group flex items-center space-x-2 text-[15px] font-medium text-white/80 hover:text-white transition-all duration-300 px-4 py-2.5 rounded-xl hover:bg-white/10 backdrop-blur-sm border border-white/10 hover:border-white/20"
+                        className="group flex items-center space-x-1 sm:space-x-2 text-[13px] sm:text-[15px] font-medium text-white/80 hover:text-white transition-all duration-300 px-2 sm:px-4 py-2 sm:py-2.5 rounded-xl hover:bg-white/10 backdrop-blur-sm border border-white/10 hover:border-white/20 min-h-[44px]"
                       >
-                        <svg className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                         </svg>
                         <span>登录</span>
                       </Link>
                       <Link
                         href="/auth/register"
-                        className="group flex items-center space-x-2 text-[15px] font-medium text-white bg-gradient-to-r from-white/20 to-white/15 hover:from-white/30 hover:to-white/25 backdrop-blur-sm px-6 py-2.5 rounded-full border border-white/30 hover:border-white/40 shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
+                        className="group flex items-center space-x-1 sm:space-x-2 text-[13px] sm:text-[15px] font-medium text-white bg-gradient-to-r from-white/20 to-white/15 hover:from-white/30 hover:to-white/25 backdrop-blur-sm px-3 sm:px-6 py-2 sm:py-2.5 rounded-full border border-white/30 hover:border-white/40 shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl min-h-[44px]"
                       >
-                        <svg className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                         </svg>
                         <span>注册</span>
@@ -119,13 +119,13 @@ export default function SearchPage() {
         </div>
       </nav>
 
-      {/* 主内容区域 - 极简设计 */}
-      <main className="relative z-10 flex-1 flex items-center justify-center px-6 py-16 overflow-visible">
+      {/* 主内容区域 - 极简设计 - 移动端优化 */}
+      <main className="relative z-10 flex-1 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-16 overflow-visible">
         <div className="w-full max-w-5xl overflow-visible">
           {/* 苹果风格品牌区域 */}
-          <div className="text-center mb-14 animate-fadeIn">
-            {/* 主标题 - 炫彩加粗版本 */}
-            <h1 className="text-[48px] sm:text-[56px] md:text-[64px] font-bold tracking-tight leading-none mb-6">
+          <div className="text-center mb-8 sm:mb-14 animate-fadeIn">
+            {/* 主标题 - 炫彩加粗版本 - 移动端优化 */}
+            <h1 className="text-[32px] xs:text-[36px] sm:text-[48px] md:text-[56px] lg:text-[64px] font-bold tracking-tight leading-none mb-4 sm:mb-6">
               <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-500 bg-clip-text text-transparent animate-gradient-x drop-shadow-lg">
                 AeroScout
               </span>
@@ -134,14 +134,14 @@ export default function SearchPage() {
             {/* 苹果风格装饰线和副标题 */}
             <div className="animate-fadeIn animation-delay-300">
               {/* 精致分隔线 */}
-              <div className="flex items-center justify-center mb-4">
-                <div className="w-12 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-                <div className="mx-4 w-1 h-1 bg-white/40 rounded-full"></div>
-                <div className="w-12 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+              <div className="flex items-center justify-center mb-3 sm:mb-4">
+                <div className="w-8 sm:w-12 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+                <div className="mx-2 sm:mx-4 w-1 h-1 bg-white/40 rounded-full"></div>
+                <div className="w-8 sm:w-12 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
               </div>
 
               {/* 副标题 */}
-              <p className="text-[16px] text-white/60 font-light tracking-wide">
+              <p className="text-[14px] sm:text-[16px] text-white/60 font-light tracking-wide">
                 智能航班搜索
               </p>
             </div>
