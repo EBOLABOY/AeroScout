@@ -1,5 +1,7 @@
 import json
 import logging
+import asyncio
+import random
 from typing import Optional, Dict, Any
 
 import httpx
@@ -14,10 +16,8 @@ from app.apis.v1.schemas import UserResponse # Assuming POI schemas might be nee
 
 logger = logging.getLogger(__name__)
 
-# Constants from 机场信息查询.py (adapted for async context)
-POI_SEARCH_OPERATION_NAME = "poiSearch"
-POI_SEARCH_SHA256HASH = "f02b0e5250b9089a56498b8a3e4332b9962c9d65c2364e0ee4cf28dcff38cc8b"
-TRIP_POI_API_URL = "https://hk.trip.com/flights/graphql/poiSearch"
+# Constants for Trip.com REST API
+TRIP_POI_API_URL = "https://hk.trip.com/restapi/soa2/14427/poiSearch"
 
 # Special value to indicate header refresh needed
 HEADER_REFRESH_REQUIRED = object()
@@ -59,25 +59,29 @@ async def _call_trip_poi_api(search_key: str, trip_type: str, mode: str, headers
         logger.warning(f"未知的 trip_type 值: {trip_type}，默认使用 'RT'")
         trip_type = "RT"
 
-    # 使用正确的 GraphQL 格式和参数值 - 恢复为与原始代码一致的格式
+    # 使用REST API格式的请求体
     payload = {
-        "operationName": POI_SEARCH_OPERATION_NAME,
-        "variables": {
-            "key": search_key,
-            "mode": mode,           # 现在使用正确的 mode 值
-            "tripType": trip_type,  # 现在使用正确的 trip_type 值
-            "Head": {}              # 恢复为空对象，与原始实现一致
+        "head": {
+            "cid": "09034062418799026920",
+            "ctok": "",
+            "cver": "1.0",
+            "lang": "01",
+            "sid": "8888",
+            "syscode": "09",
+            "auth": "",
+            "extension": []
         },
-        "extensions": {
-            "persistedQuery": {
-                "version": 1,
-                "sha256Hash": POI_SEARCH_SHA256HASH
-            }
+        "searchRequest": {
+            "keyword": search_key,
+            "searchType": mode,  # 0 for departure, 1 for arrival
+            "tripType": trip_type,  # RT for round trip
+            "locale": "zh-HK",
+            "currency": "CNY"
         }
     }
 
     # 添加详细的调试日志
-    logger.debug(f"构造的 Trip.com GraphQL 请求: {json.dumps(payload)}")
+    logger.debug(f"构造的 Trip.com REST API 请求: {json.dumps(payload)}")
     logger.debug(f"使用的请求头: {json.dumps({k: v for k, v in headers.items() if k != 'cookie'})}")
     logger.debug(f"Cookie长度: {len(headers.get('cookie', ''))}")
 
@@ -109,21 +113,18 @@ async def _call_trip_poi_api(search_key: str, trip_type: str, mode: str, headers
             data = response.json()
             logger.debug(f"Trip.com POI API Raw Response: {json.dumps(data)}")
 
-            # Check GraphQL level errors
-            if "errors" in data and data["errors"]:
-                logger.error(f"Trip.com GraphQL API returned errors: {data['errors']}")
-                return None
-
-            # Check for successful data structure
-            if ("data" in data and
-                "poiSearch" in data["data"] and
-                data["data"]["poiSearch"] and
-                isinstance(data["data"]["poiSearch"], dict) and
-                data["data"]["poiSearch"].get("ResponseStatus", {}).get("Ack") == "Success"):
-                logger.info(f"Successfully retrieved POI data for key '{search_key}'.")
-                return data["data"]["poiSearch"] # Return the relevant part
+            # Check REST API response structure
+            if isinstance(data, dict):
+                # 检查是否有ResponseStatus字段
+                response_status = data.get("ResponseStatus", {})
+                if response_status.get("Ack") == "Success":
+                    logger.info(f"Successfully retrieved POI data for key '{search_key}'.")
+                    return data  # Return the full response
+                else:
+                    logger.warning(f"Trip.com POI API returned non-success status: {response_status}")
+                    return None
             else:
-                logger.warning(f"Trip.com POI search response format invalid or not successful for key '{search_key}'. Response: {json.dumps(data)}")
+                logger.warning(f"Trip.com POI search response format invalid for key '{search_key}'. Response: {json.dumps(data)}")
                 return None
 
         except httpx.HTTPStatusError as e:
@@ -241,10 +242,22 @@ def process_poi_results(poi_data: Dict[str, Any], query: str) -> Dict[str, Any]:
     try:
         airports = []
 
-        # 检查原始数据中是否有results数组
-        results = poi_data.get("results", [])
+        # 检查REST API响应中的数据结构
+        # REST API可能返回不同的结构，需要适配
+        results = []
+
+        # 尝试从不同可能的字段中提取结果
+        if "searchResponse" in poi_data:
+            search_response = poi_data["searchResponse"]
+            if isinstance(search_response, dict):
+                results = search_response.get("results", []) or search_response.get("poiList", [])
+        elif "results" in poi_data:
+            results = poi_data.get("results", [])
+        elif "poiList" in poi_data:
+            results = poi_data.get("poiList", [])
+
         if not results:
-            logger.warning("No 'results' array found in Trip.com API response")
+            logger.warning("No results found in Trip.com REST API response")
             return {
                 "success": True,
                 "airports": [],
